@@ -1,0 +1,6 @@
+{
+  "plaintext": "Demo#123",
+  "encrypted": "v1:3W8tukK/ypHmdsik:YKJ+9yxQy0wjF1uh3PI4nw==:sP7J8bdAJiY=",
+  "decrypted": "Demo#123",
+  "match": true
+}

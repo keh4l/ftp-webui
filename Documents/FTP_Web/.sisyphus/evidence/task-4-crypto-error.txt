@@ -1,0 +1,6 @@
+{
+  "ok": true,
+  "code": "CRYPTO_DECRYPT_FAILED",
+  "expected": "CRYPTO_DECRYPT_FAILED",
+  "matchesExpected": true
+}

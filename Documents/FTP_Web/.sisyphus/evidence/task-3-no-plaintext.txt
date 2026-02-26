@@ -1,0 +1,15 @@
+Task 3 plaintext credential check
+================================
+
+Checked database file:
+- /Users/keh4l/Documents/FTP_Web/.sisyphus/tmp/task-3/task-3-persistence.sqlite
+
+Assertions:
+1) Schema columns do not contain plaintext credential fields such as `password` or `secret`.
+   Actual columns: id, protocol, host, port, username, encrypted_secret, label, created_at, updated_at
+2) Stored row uses `encrypted_secret` only.
+   Stored value: enc:v1:U3VwZXJTZWNyZXQjMTIz
+3) Raw SQLite file does not contain the sample plaintext (`SuperSecret#123`).
+   Result: plaintextFoundInDbFile=false
+
+Conclusion: PASS (no plaintext credential detected on disk for this verification case).

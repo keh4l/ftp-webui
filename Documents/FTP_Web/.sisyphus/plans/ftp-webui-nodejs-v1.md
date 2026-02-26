@@ -63,10 +63,10 @@
 - 测试与验证资产（API、E2E、并发烟测、证据文件）
 
 ### Definition of Done
-- [ ] `docker compose up -d --build` 能启动应用与依赖测试服务
-- [ ] `curl http://localhost:3000/api/health` 返回健康状态
-- [ ] V1 全部功能有 agent 可执行 QA 场景并产出证据文件
-- [ ] 自动化测试可运行且关键路径通过
+- [x] `docker compose up -d --build` 能启动应用与依赖测试服务
+- [x] `curl http://localhost:3000/api/health` 返回健康状态
+- [x] V1 全部功能有 agent 可执行 QA 场景并产出证据文件
+- [x] 自动化测试可运行且关键路径通过
 
 ### Must Have
 - 三协议支持：FTP/FTPS/SFTP
@@ -161,13 +161,13 @@
 - Web 可访问性与 WCAG 2.1：`https://www.w3.org/TR/WCAG21/`
 
 ### Frontend Acceptance Checklist
-- [ ] 连接页、文件页、编辑页在三种断点下布局可用。
-- [ ] 所有关键操作有明确加载态、成功态、失败态。
-- [ ] 错误提示可定位（字段/路径/连接维度），无“未知错误”泛化文案。
-- [ ] 批量操作结果面板包含逐项结果与失败重试入口。
-- [ ] 不展示敏感字段（密码/私钥明文）。
-- [ ] 所有关键异步区块具备 `aria-live` 或同级可达性反馈。
-- [ ] 关键交互元素具备键盘可达与可见焦点样式。
+- [x] 连接页、文件页、编辑页在三种断点下布局可用。
+- [x] 所有关键操作有明确加载态、成功态、失败态。
+- [x] 错误提示可定位（字段/路径/连接维度），无“未知错误”泛化文案。
+- [x] 批量操作结果面板包含逐项结果与失败重试入口。
+- [x] 不展示敏感字段（密码/私钥明文）。
+- [x] 所有关键异步区块具备 `aria-live` 或同级可达性反馈。
+- [x] 关键交互元素具备键盘可达与可见焦点样式。
 
 ---
 
@@ -274,7 +274,7 @@ Max Concurrent: 7（Wave 1/2）
 
 ## TODOs
 
-- [ ] 1. 初始化 Next.js 一体化工程与运行脚本
+- [x] 1. 初始化 Next.js 一体化工程与运行脚本
 
   **What to do**:
   - 创建 Next.js（App Router, TypeScript）基础目录与启动脚本。
@@ -333,7 +333,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `chore(scaffold): bootstrap nextjs app shell`
 
-- [ ] 2. 建立依赖与工程规范基线
+- [x] 2. 建立依赖与工程规范基线
 
   **What to do**:
   - 引入核心依赖（basic-ftp、ssh2-sftp-client、zod、pino 等）。
@@ -393,7 +393,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `chore(core): add dependencies and quality scripts`
 
-- [ ] 3. 定义连接配置数据模型与持久化骨架
+- [x] 3. 定义连接配置数据模型与持久化骨架
 
   **What to do**:
   - 设计连接实体（协议、主机、端口、用户名、加密凭据、标签、更新时间）。
@@ -453,7 +453,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(data): add connection model and storage interface`
 
-- [ ] 4. 实现凭据加密与密钥加载模块
+- [x] 4. 实现凭据加密与密钥加载模块
 
   **What to do**:
   - 实现 AES-256-GCM 加解密与密钥派生/加载逻辑。
@@ -513,7 +513,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(security): add credential encryption module`
 
-- [ ] 5. 设计统一协议适配接口（FTP/FTPS/SFTP）
+- [x] 5. 设计统一协议适配接口（FTP/FTPS/SFTP）
 
   **What to do**:
   - 定义统一操作契约：connect/test/list/upload/download/readText/writeText/batch。
@@ -573,7 +573,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(core): define protocol adapter contract`
 
-- [ ] 6. 搭建 Docker 测试环境（FTP/FTPS/SFTP）
+- [x] 6. 搭建 Docker 测试环境（FTP/FTPS/SFTP）
 
   **What to do**:
   - 准备 docker-compose：应用容器 + FTP/FTPS/SFTP 测试服务容器。
@@ -633,7 +633,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `chore(devops): add local ftp/ftps/sftp compose stack`
 
-- [ ] 7. 建立错误模型与日志脱敏规范
+- [x] 7. 建立错误模型与日志脱敏规范
 
   **What to do**:
   - 统一错误码（连接失败、认证失败、权限拒绝、路径非法、编码不支持等）。
@@ -692,7 +692,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(core): standardize error codes and secure logging`
 
-- [ ] 8. 实现 FTP/FTPS 适配器（basic-ftp）
+- [x] 8. 实现 FTP/FTPS 适配器（basic-ftp）
 
   **What to do**:
   - 完成 FTP/FTPS 连接、目录列表、上传下载、重连封装。
@@ -752,7 +752,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(adapter): implement ftp and ftps adapter`
 
-- [ ] 9. 实现 SFTP 适配器（ssh2-sftp-client）
+- [x] 9. 实现 SFTP 适配器（ssh2-sftp-client）
 
   **What to do**:
   - 实现 SFTP 连接、目录操作、上传下载与 fastGet/fastPut。
@@ -812,7 +812,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(adapter): implement sftp adapter`
 
-- [ ] 10. 实现连接管理服务（CRUD + 连通性测试）
+- [x] 10. 实现连接管理服务（CRUD + 连通性测试）
 
   **What to do**:
   - 实现连接新增、更新、删除、列表、详情。
@@ -873,7 +873,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(connection): add secure connection management service`
 
-- [ ] 11. 实现连接池、超时与指数退避重试
+- [x] 11. 实现连接池、超时与指数退避重试
 
   **What to do**:
   - 构建每协议连接池策略（单连接单操作限制下的并发控制）。
@@ -933,7 +933,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(runtime): add pooling timeout and retry policy`
 
-- [ ] 12. 实现文件浏览服务（list/stat/path normalize）
+- [x] 12. 实现文件浏览服务（list/stat/path normalize）
 
   **What to do**:
   - 实现目录列表、文件元信息、路径规范化。
@@ -993,7 +993,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(file): add browse service with path normalization`
 
-- [ ] 13. 实现上传下载服务（流式 + 进度 + 续传）
+- [x] 13. 实现上传下载服务（流式 + 进度 + 续传）
 
   **What to do**:
   - 实现统一上传/下载服务，优先流式传输，避免大文件内存峰值。
@@ -1054,7 +1054,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(file): add streaming upload and download service`
 
-- [ ] 14. 实现在线文本编辑服务（读写 + 冲突检测）
+- [x] 14. 实现在线文本编辑服务（读写 + 冲突检测）
 
   **What to do**:
   - 提供文本文件读取与保存接口。
@@ -1114,7 +1114,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(file): add online text editing with conflict control`
 
-- [ ] 15. 实现连接管理 API（REST）
+- [x] 15. 实现连接管理 API（REST）
 
   **What to do**:
   - 暴露连接 CRUD、连接测试、连接详情接口。
@@ -1175,7 +1175,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(api): expose connection management endpoints`
 
-- [ ] 16. 实现文件操作 API（浏览/传输/编辑/批量）
+- [x] 16. 实现文件操作 API（浏览/传输/编辑/批量）
 
   **What to do**:
   - 暴露文件浏览、上传、下载、读写文本与批量操作接口。
@@ -1236,7 +1236,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(api): add file operation endpoints with batch semantics`
 
-- [ ] 17. 实现 WebUI 连接管理页
+- [x] 17. 实现 WebUI 连接管理页
 
   **What to do**:
   - 提供连接列表、创建/编辑弹窗、连接测试与删除交互。
@@ -1300,7 +1300,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(ui): build connection management interface`
 
-- [ ] 18. 实现 WebUI 文件浏览与传输页
+- [x] 18. 实现 WebUI 文件浏览与传输页
 
   **What to do**:
   - 提供目录树/列表浏览、路径导航、上传下载入口。
@@ -1364,7 +1364,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(ui): build file explorer and transfer panel`
 
-- [ ] 19. 实现 WebUI 在线编辑与批量操作交互
+- [x] 19. 实现 WebUI 在线编辑与批量操作交互
 
   **What to do**:
   - 集成文本编辑器视图、保存冲突提示、批量勾选与批量执行结果面板。
@@ -1428,7 +1428,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(ui): add text editor and batch operation UX`
 
-- [ ] 20. 完成安全加固（SSRF/路径穿越/输入约束/最小审计）
+- [x] 20. 完成安全加固（SSRF/路径穿越/输入约束/最小审计）
 
   **What to do**:
   - 增加目标地址与端口白名单策略，阻断 SSRF 风险。
@@ -1490,7 +1490,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `feat(security): harden validation boundaries and audit logs`
 
-- [ ] 21. 补齐自动化测试（单元 + 集成）
+- [x] 21. 补齐自动化测试（单元 + 集成）
 
   **What to do**:
   - 为核心模块补齐单元测试（加密、适配器契约、路径校验、错误映射）。
@@ -1549,7 +1549,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `test(core): add unit and integration coverage for v1 flows`
 
-- [ ] 22. 建立 Playwright E2E 测试场景
+- [x] 22. 建立 Playwright E2E 测试场景
 
   **What to do**:
   - 编写连接管理、文件浏览、上传、编辑、批量操作的端到端脚本。
@@ -1629,7 +1629,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `test(e2e): add playwright scenarios for full ui flows`
 
-- [ ] 23. 执行并发与恢复烟测（10-20 活跃连接）
+- [x] 23. 执行并发与恢复烟测（10-20 活跃连接）
 
   **What to do**:
   - 构建 10-20 活跃连接下的连接测试、列表、传输混合压力烟测。
@@ -1690,7 +1690,7 @@ Max Concurrent: 7（Wave 1/2）
   **Commit**: YES
   - Message: `test(runtime): add concurrency and recovery smoke validation`
 
-- [ ] 24. 完成部署文档与运维回归脚本
+- [x] 24. 完成部署文档与运维回归脚本
 
   **What to do**:
   - 输出 Docker 单机部署、升级、备份恢复文档。
@@ -1754,16 +1754,16 @@ Max Concurrent: 7（Wave 1/2）
 
 ## Final Verification Wave (MANDATORY — after ALL implementation tasks)
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   输出: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT`
 
-- [ ] F2. **Code Quality Review** — `unspecified-high`
+- [x] F2. **Code Quality Review** — `unspecified-high`
   输出: `Build [PASS/FAIL] | Lint [PASS/FAIL] | Tests [N pass/N fail] | VERDICT`
 
-- [ ] F3. **Real Manual QA** — `unspecified-high` (+ `playwright`)
+- [x] F3. **Real Manual QA** — `unspecified-high` (+ `playwright`)
   输出: `Scenarios [N/N pass] | Integration [N/N] | Edge Cases [N] | VERDICT`
 
-- [ ] F4. **Scope Fidelity Check** — `deep`
+- [x] F4. **Scope Fidelity Check** — `deep`
   输出: `Tasks [N/N compliant] | Contamination [CLEAN/N issues] | VERDICT`
 
 ---
@@ -1788,7 +1788,7 @@ pnpm playwright test
 ```
 
 ### Final Checklist
-- [ ] All Must Have present
-- [ ] All Must NOT Have absent
-- [ ] Tests pass
-- [ ] Evidence files complete in `.sisyphus/evidence/`
+- [x] All Must Have present
+- [x] All Must NOT Have absent
+- [x] Tests pass
+- [x] Evidence files complete in `.sisyphus/evidence/`

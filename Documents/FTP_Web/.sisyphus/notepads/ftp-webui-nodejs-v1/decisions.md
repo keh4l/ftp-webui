@@ -18,3 +18,13 @@
 - Route convention: /connections, /files/[connectionId], /files/[connectionId]/edit?path=
 - E2E selectors: data-testid first, never class-based
 
+## T18 Decisions (2026-02-26)
+- File browser page uses a single client entry (`src/app/files/[connectionId]/page.tsx`) and composes presentational subcomponents from `src/components/files/*`.
+- Error handling strategy: detect 404 / `CONNECTION_NOT_FOUND` as recoverable empty state and guide users back to `/connections`.
+- Upload strategy: send multipart `FormData` with `remotePath` + `file` to `/api/connections/[id]/files/upload`; refresh current directory after success.
+- Download strategy: use `window.open` against `/api/connections/[id]/files/download?path=...` for browser-native streaming download.
+
+## 2026-02-26 F4 Scope Fidelity
+- Scope fidelity audit concludes `Tasks [28/28 compliant] | Contamination [CLEAN/0 issues] | VERDICT PASS`.
+- Forbidden-scope keyword scan in `src/**/*.{ts,tsx}` for RBAC/SSO/multi-tenant/queue/distributed terms returned no matches.
+- V1 guardrails remain aligned: single-admin model, encrypted credential storage, strict protocol validation defaults, editor small-text-file constraints.

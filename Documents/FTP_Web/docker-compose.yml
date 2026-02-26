@@ -1,0 +1,107 @@
+# =============================================================================
+# FTP WebUI - Docker Compose (Development & Testing)
+# =============================================================================
+# Test credentials (DO NOT use in production):
+#   FTP:  ftpuser / ftppass123
+#   SFTP: sftpuser / sftppass123
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Next.js Application
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - APP_MASTER_KEY=test-master-key-docker-dev
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=admin
+      - NODE_ENV=production
+      - FTP_TEST_HOST=ftp
+      - FTP_TEST_PORT=21
+      - FTP_TEST_USER=ftpuser
+      - FTP_TEST_PASS=ftppass123
+      - SFTP_TEST_HOST=sftp
+      - SFTP_TEST_PORT=22
+      - SFTP_TEST_USER=sftpuser
+      - SFTP_TEST_PASS=sftppass123
+    depends_on:
+      ftp:
+        condition: service_healthy
+      sftp:
+        condition: service_healthy
+    networks:
+      - ftpnet
+
+  # ---------------------------------------------------------------------------
+  # FTP/FTPS Server (Pure-FTPd)
+  # ---------------------------------------------------------------------------
+  # Supports both plain FTP and explicit FTPS (STARTTLS)
+  # --tls=1 means TLS is optional: clients can connect via FTP or FTPS
+  # Passive port range: 21100-21110 (mapped to host)
+  # ---------------------------------------------------------------------------
+  ftp:
+    image: stilliard/pure-ftpd:latest
+    environment:
+      PUBLICHOST: "ftp"
+      FTP_USER_NAME: "ftpuser"
+      FTP_USER_PASS: "ftppass123"
+      FTP_USER_HOME: "/home/ftpuser"
+      FTP_PASSIVE_PORTS: "21100:21110"
+      FTP_MAX_CLIENTS: "20"
+      FTP_MAX_CONNECTIONS: "10"
+      ADDED_FLAGS: "--tls=1"
+      TLS_CN: "localhost"
+      TLS_C: "US"
+      TLS_ORG: "FTP-WebUI-Test"
+    ports:
+      - "21:21"
+      - "21100-21110:21100-21110"
+    volumes:
+      - ftp-data:/home/ftpuser
+    healthcheck:
+      test: ["CMD-SHELL", "test -s /run/pure-ftpd.pid && kill -0 $(cat /run/pure-ftpd.pid) >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
+    networks:
+      - ftpnet
+
+  # ---------------------------------------------------------------------------
+  # SFTP Server (OpenSSH)
+  # ---------------------------------------------------------------------------
+  # Format: user:password:uid:gid:directories
+  # Creates /home/sftpuser/upload with correct ownership
+  # ---------------------------------------------------------------------------
+  sftp:
+    image: atmoz/sftp:latest
+    command: "sftpuser:sftppass123:::upload"
+    ports:
+      - "2222:22"
+    volumes:
+      - sftp-data:/home/sftpuser/upload
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f sshd >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    restart: unless-stopped
+    networks:
+      - ftpnet
+
+volumes:
+  ftp-data:
+    driver: local
+  sftp-data:
+    driver: local
+
+networks:
+  ftpnet:
+    driver: bridge
