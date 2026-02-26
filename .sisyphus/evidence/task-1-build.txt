@@ -1,0 +1,39 @@
+
+> ftp-webui@0.1.0 build /Users/keh4l/Documents/FTP_Web
+> next build
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /Users/keh4l/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /Users/keh4l/Documents/FTP_Web/pnpm-lock.yaml
+
+   ▲ Next.js 15.5.12
+   - Environments: .env.local
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 853ms
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/5) ...
+   Generating static pages (1/5) 
+   Generating static pages (2/5) 
+   Generating static pages (3/5) 
+ ✓ Generating static pages (5/5)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                      124 B         102 kB
+├ ○ /_not-found                            992 B         103 kB
+└ ƒ /api/health                            124 B         102 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/6ee9f5d1-21ccf1713a250a03.js  54.2 kB
+  ├ chunks/977-2cccd5a7b845b42f.js       45.9 kB
+  └ other shared chunks (total)           1.9 kB
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
