@@ -1,0 +1,4 @@
+
+> ftp-webui@0.1.0 typecheck /Users/keh4l/Documents/FTP_Web
+> tsc --noEmit
+

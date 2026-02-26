@@ -1,0 +1,36 @@
+=== Task 2 Quality Evidence ===
+Date: Thu Feb 26 2026
+
+=== pnpm lint ===
+> ftp-webui@0.1.0 lint /Users/keh4l/Documents/FTP_Web
+> next lint
+
+✔ No ESLint warnings or errors
+Exit code: 0
+
+=== pnpm typecheck ===
+> ftp-webui@0.1.0 typecheck /Users/keh4l/Documents/FTP_Web
+> tsc --noEmit
+
+Exit code: 0
+
+=== pnpm build ===
+> ftp-webui@0.1.0 build /Users/keh4l/Documents/FTP_Web
+> next build
+
+▲ Next.js 15.5.12
+✓ Compiled successfully
+✓ Generating static pages (5/5)
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+└ ƒ /api/health
+
+Exit code: 0
+
+=== pnpm run test ===
+ERR_PNPM_NO_SCRIPT Missing script: test
+
+Exit code: 1
+Note: 当前仓库尚未定义 test 脚本（符合计划中“先实现后补测”的阶段性状态）。

@@ -1,0 +1,4 @@
+pnpm typecheck: EXPECTED FAIL
+Failure trigger: removed required method 'mkdir' from adapter stub.
+Compiler error: src/lib/protocol/stubs.ts(14,14): error TS2420: Class 'FtpAdapterStub' incorrectly implements interface 'ProtocolAdapter'.
+Detail: Property 'mkdir' is missing in type 'FtpAdapterStub' but required in type 'ProtocolAdapter'.

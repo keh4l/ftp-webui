@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Lexend, Source_Sans_3, Noto_Sans_SC } from "next/font/google";
 import "./globals.css";
+import { NavBar } from "@/components/layout/nav-bar";
+
 
 const lexend = Lexend({
   subsets: ["latin"],
@@ -37,6 +39,8 @@ export default function RootLayout({
       className={`dark ${lexend.variable} ${sourceSans3.variable} ${notoSansSC.variable}`}
     >
       <body className="font-[family-name:var(--font-source-sans)]">
+        <NavBar />
+
         {children}
       </body>
     </html>

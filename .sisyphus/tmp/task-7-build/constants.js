@@ -1,0 +1,24 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.ErrorCode = void 0;
+exports.ErrorCode = {
+    // Connection
+    CONNECTION_NOT_FOUND: "CONNECTION_NOT_FOUND",
+    CONNECTION_TIMEOUT: "CONNECTION_TIMEOUT",
+    AUTH_FAILED: "AUTH_FAILED",
+    // Path & validation
+    INVALID_PATH: "INVALID_PATH",
+    VALIDATION_ERROR: "VALIDATION_ERROR",
+    TARGET_NOT_ALLOWED: "TARGET_NOT_ALLOWED",
+    // Crypto
+    CRYPTO_DECRYPT_FAILED: "CRYPTO_DECRYPT_FAILED",
+    // File operations
+    FILE_TOO_LARGE: "FILE_TOO_LARGE",
+    FILE_VERSION_CONFLICT: "FILE_VERSION_CONFLICT",
+    // Security
+    TLS_VALIDATION_FAILED: "TLS_VALIDATION_FAILED",
+    HOST_KEY_MISMATCH: "HOST_KEY_MISMATCH",
+    // Resilience
+    RETRY_EXHAUSTED: "RETRY_EXHAUSTED",
+    STALE_TARGET: "STALE_TARGET",
+};

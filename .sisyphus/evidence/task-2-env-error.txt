@@ -1,0 +1,24 @@
+=== Task 2 Environment Variable Error Evidence ===
+Date: Thu Feb 26 2026
+
+=== Test: APP_MASTER_KEY missing during app build ===
+Command: APP_MASTER_KEY= pnpm build
+
+> ftp-webui@0.1.0 build /Users/keh4l/Documents/FTP_Web
+> next build
+
+[Error: Failed to collect configuration for /_not-found] {
+  [cause]: Error: ❌ Environment validation failed:
+  ✖ APP_MASTER_KEY must not be empty
+    → at APP_MASTER_KEY
+
+  Missing or invalid: APP_MASTER_KEY
+}
+
+> Build error occurred
+[Error: Failed to collect page data for /_not-found] { type: 'Error' }
+ELIFECYCLE Command failed with exit code 1.
+
+Exit code: 1
+
+Result: 启动路径（build 阶段）已触发环境变量校验，缺失 APP_MASTER_KEY 会立即失败。

@@ -1,0 +1,2 @@
+pnpm typecheck: PASS
+ProtocolAdapter stubs: FtpAdapterStub, SftpAdapterStub compile successfully.

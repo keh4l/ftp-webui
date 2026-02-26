@@ -1,0 +1,46 @@
+{
+  "dbPath": "/Users/keh4l/Documents/FTP_Web/.sisyphus/tmp/task-3/task-3-persistence.sqlite",
+  "created": {
+    "id": "671cd10c-5ea2-4b9c-a2e9-e3310fbb52ee",
+    "protocol": "sftp",
+    "host": "sftp.example.com",
+    "port": 2222,
+    "username": "demo-user",
+    "encryptedSecret": "enc:v1:U3VwZXJTZWNyZXQjMTIz",
+    "label": "demo-connection",
+    "createdAt": "2026-02-26T09:16:20.142Z",
+    "updatedAt": "2026-02-26T09:16:20.142Z"
+  },
+  "listCount": 1,
+  "listedFirst": {
+    "id": "671cd10c-5ea2-4b9c-a2e9-e3310fbb52ee",
+    "protocol": "sftp",
+    "host": "sftp.example.com",
+    "port": 2222,
+    "username": "demo-user",
+    "encryptedSecret": "enc:v1:U3VwZXJTZWNyZXQjMTIz",
+    "label": "demo-connection",
+    "createdAt": "2026-02-26T09:16:20.142Z",
+    "updatedAt": "2026-02-26T09:16:20.142Z"
+  },
+  "schemaColumns": [
+    "id",
+    "protocol",
+    "host",
+    "port",
+    "username",
+    "encrypted_secret",
+    "label",
+    "created_at",
+    "updated_at"
+  ],
+  "storedRow": {
+    "protocol": "sftp",
+    "host": "sftp.example.com",
+    "port": 2222,
+    "username": "demo-user",
+    "encrypted_secret": "enc:v1:U3VwZXJTZWNyZXQjMTIz",
+    "label": "demo-connection"
+  },
+  "plaintextFoundInDbFile": false
+}

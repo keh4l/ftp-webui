@@ -1,0 +1,7 @@
+total_operations=200
+success_count=200
+fail_count=0
+success_rate=100.00%
+p95_latency_ms=87
+retry_metrics={"attempts":220,"retries":20,"successes":200,"failures":0,"exhausted":0,"timeouts":20,"circuitOpenRejects":0}
+pool_metrics={"active":0,"idle":20,"total":20,"waiting":0,"maxConnections":20,"metrics":{"acquireRequests":200,"acquireWaits":180,"acquireTimeouts":0,"created":20,"reused":180,"released":200,"destroyed":0,"idleEvictions":0}}
