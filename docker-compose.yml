@@ -15,7 +15,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "3001:3001"
     environment:
       APP_MASTER_KEY: ${APP_MASTER_KEY:-test-master-key-docker-dev}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
