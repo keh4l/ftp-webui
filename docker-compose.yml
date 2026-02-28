@@ -17,18 +17,18 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - APP_MASTER_KEY=test-master-key-docker-dev
-      - ADMIN_USERNAME=admin
-      - ADMIN_PASSWORD=admin
-      - NODE_ENV=production
-      - FTP_TEST_HOST=ftp
-      - FTP_TEST_PORT=21
-      - FTP_TEST_USER=ftpuser
-      - FTP_TEST_PASS=ftppass123
-      - SFTP_TEST_HOST=sftp
-      - SFTP_TEST_PORT=22
-      - SFTP_TEST_USER=sftpuser
-      - SFTP_TEST_PASS=sftppass123
+      APP_MASTER_KEY: ${APP_MASTER_KEY:-test-master-key-docker-dev}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
+      NODE_ENV: production
+      FTP_TEST_HOST: ftp
+      FTP_TEST_PORT: 21
+      FTP_TEST_USER: ftpuser
+      FTP_TEST_PASS: ftppass123
+      SFTP_TEST_HOST: sftp
+      SFTP_TEST_PORT: 22
+      SFTP_TEST_USER: sftpuser
+      SFTP_TEST_PASS: sftppass123
     depends_on:
       ftp:
         condition: service_healthy

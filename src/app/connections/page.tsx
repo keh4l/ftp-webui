@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, Server } from "lucide-react";
 import {
@@ -30,6 +31,10 @@ type TestResult = {
   error?: {
     message?: string;
   };
+};
+
+type AuthMeResult = {
+  authenticated: boolean;
 };
 
 const focusRingClass =
@@ -75,6 +80,9 @@ async function requestJson<T>(input: RequestInfo | URL, init?: RequestInit): Pro
 }
 
 export default function ConnectionsPage() {
+  const router = useRouter();
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [connections, setConnections] = useState<ConnectionItem[]>([]);
   const [statusById, setStatusById] = useState<Record<string, ConnectionStatus>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -133,8 +141,42 @@ export default function ConnectionsPage() {
   }, [pushToast]);
 
   useEffect(() => {
+    let isMounted = true;
+
+    const checkAuth = async () => {
+      try {
+        const result = await requestJson<AuthMeResult>("/api/auth/me");
+        if (!result.authenticated) {
+          router.replace("/login");
+          return;
+        }
+
+        if (isMounted) {
+          setIsAuthenticated(true);
+        }
+      } catch {
+        router.replace("/login");
+      } finally {
+        if (isMounted) {
+          setIsAuthChecked(true);
+        }
+      }
+    };
+
+    void checkAuth();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      return;
+    }
+
     void refreshConnections(true);
-  }, [refreshConnections]);
+  }, [isAuthenticated, refreshConnections]);
 
   const formInitialValues = useMemo<Partial<ConnectionFormValues> | undefined>(() => {
     if (!editingConnection) {
@@ -333,6 +375,21 @@ export default function ConnectionsPage() {
       setDeletingId(null);
     }
   };
+
+  if (!isAuthChecked) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-bg-deep px-4">
+        <div className="inline-flex items-center gap-3 rounded-xl border border-border-default bg-bg-primary px-5 py-3 text-sm text-text-secondary">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          正在验证登录状态...
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-bg-deep text-text-primary">
