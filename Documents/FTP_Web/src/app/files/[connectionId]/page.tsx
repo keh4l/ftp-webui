@@ -6,6 +6,8 @@ import { ArrowLeft } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { BatchDeleteDialog } from "@/components/files/batch-delete-dialog";
+import { BatchMoveDialog } from "@/components/files/batch-move-dialog";
+import { CreateEntryDialog } from "@/components/files/create-entry-dialog";
 import { BatchResultPanel } from "@/components/files/batch-result-panel";
 import { FileBreadcrumb } from "@/components/files/file-breadcrumb";
 import { FileTable } from "@/components/files/file-table";
@@ -55,6 +57,19 @@ function parseErrorPayload(payload: unknown): ApiErrorResponse["error"] {
   return maybeError;
 }
 
+function normalizeEntryName(input: string): string | null {
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  if (trimmed.includes("/") || trimmed.includes("\\")) {
+    return null;
+  }
+
+  return trimmed;
+}
+
 export default function FileBrowserPage() {
   const params = useParams<{ connectionId: string }>();
   const router = useRouter();
@@ -64,6 +79,7 @@ export default function FileBrowserPage() {
   const [pathInput, setPathInput] = useState("/");
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMoving, setIsMoving] = useState(false);
   const [connectionMissing, setConnectionMissing] = useState(false);
   const [transferStatus, setTransferStatus] = useState("尚未执行传输");
   const [errorToast, setErrorToast] = useState<string | null>(null);
@@ -71,9 +87,31 @@ export default function FileBrowserPage() {
 
   // Batch selection state
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const [showCreateEntryDialog, setShowCreateEntryDialog] = useState(false);
+  const [createEntryDialogType, setCreateEntryDialogType] = useState<"file" | "directory">("file");
+  const [createEntryDialogKey, setCreateEntryDialogKey] = useState(0);
+  const [showBatchMoveDialog, setShowBatchMoveDialog] = useState(false);
+  const [batchMoveDialogKey, setBatchMoveDialogKey] = useState(0);
   const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState(false);
   const [batchResults, setBatchResults] = useState<BatchItemResult[]>([]);
   const [showBatchResults, setShowBatchResults] = useState(false);
+
+  const closeCreateEntryDialog = useCallback(() => {
+    setShowCreateEntryDialog(false);
+    requestAnimationFrame(() => {
+      const testId = createEntryDialogType === "file" ? "file-create-btn" : "folder-create-btn";
+      const trigger = document.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`);
+      trigger?.focus();
+    });
+  }, [createEntryDialogType]);
+
+  const closeBatchMoveDialog = useCallback(() => {
+    setShowBatchMoveDialog(false);
+    requestAnimationFrame(() => {
+      const trigger = document.querySelector<HTMLButtonElement>('[data-testid="batch-move-btn"]');
+      trigger?.focus();
+    });
+  }, []);
 
   const closeBatchDeleteDialog = useCallback(() => {
     setShowBatchDeleteDialog(false);
@@ -151,6 +189,7 @@ export default function FileBrowserPage() {
   }, [clearToasts, errorToast, successToast]);
 
   const canGoParent = currentPath !== "/";
+  const isBusy = isLoading || isMoving;
   const pageTitle = useMemo(() => `文件浏览 · ${currentPath}`, [currentPath]);
 
   const handleNavigate = useCallback(
@@ -237,6 +276,193 @@ export default function FileBrowserPage() {
     [connectionId, currentPath, router],
   );
 
+  const executeMoveEntries = useCallback(
+    async (sourceEntries: FileEntry[], destinationDirPath: string, destinationLabel: string) => {
+      if (!connectionId || sourceEntries.length === 0) return;
+
+      const sourcePathMap = new Map<string, FileEntry>();
+      for (const entry of sourceEntries) {
+        const sourcePath = entry.path ? normalizePath(entry.path) : childPath(currentPath, entry.name);
+
+        if (
+          entry.type === "directory" &&
+          (destinationDirPath === sourcePath || destinationDirPath.startsWith(`${sourcePath}/`))
+        ) {
+          setErrorToast(`不能将目录「${entry.name}」移动到自身或其子目录`);
+          setTransferStatus(`移动失败：${entry.name}`);
+          return;
+        }
+
+        if (parentPath(sourcePath) === destinationDirPath || sourcePath === destinationDirPath) {
+          continue;
+        }
+
+        sourcePathMap.set(sourcePath, entry);
+      }
+
+      const sourcePaths = Array.from(sourcePathMap.keys());
+      if (sourcePaths.length === 0) {
+        setTransferStatus(`所选项目已在目标目录：${destinationLabel}`);
+        return;
+      }
+
+      const moveLabel = sourcePaths.length === 1 ? sourceEntries[0]?.name ?? sourcePaths[0] : `${sourcePaths.length} 个项目`;
+      clearToasts();
+      setIsMoving(true);
+      setTransferStatus(`正在移动 ${moveLabel} → ${destinationLabel}`);
+
+      try {
+        const response = await fetch(`/api/connections/${encodeURIComponent(connectionId)}/files/batch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "move",
+            sourcePaths,
+            destinationDir: destinationDirPath,
+          }),
+        });
+        const payload = (await response.json()) as { results?: BatchItemResult[] };
+
+        if (!response.ok) {
+          const apiError = parseErrorPayload(payload as unknown);
+          throw new Error(apiError?.message ?? "移动失败");
+        }
+
+        const results = payload.results ?? [];
+        const successCount = results.filter((item) => item.success).length;
+        const failCount = results.length - successCount;
+
+        if (failCount === 0) {
+          setSuccessToast(`已移动 ${successCount} 个项目到 ${destinationLabel}`);
+        } else {
+          setErrorToast(`移动完成：${successCount} 成功，${failCount} 失败`);
+        }
+
+        setTransferStatus(`移动完成：${successCount} 成功，${failCount} 失败`);
+        setSelectedPaths(new Set());
+        await loadDirectory(currentPath, { keepLoading: true });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "移动失败";
+        setErrorToast(message);
+        setTransferStatus(`移动失败：${moveLabel}`);
+      } finally {
+        setIsMoving(false);
+      }
+    },
+    [clearToasts, connectionId, currentPath, loadDirectory],
+  );
+
+  const handleMoveEntries = useCallback(
+    (sourceEntries: FileEntry[], destinationDirectory: FileEntry) => {
+      const destinationDirPath = destinationDirectory.path
+        ? normalizePath(destinationDirectory.path)
+        : childPath(currentPath, destinationDirectory.name);
+
+      void executeMoveEntries(sourceEntries, destinationDirPath, destinationDirectory.name);
+    },
+    [currentPath, executeMoveEntries],
+  );
+
+  const handleBatchMove = useCallback(() => {
+    if (selectedPaths.size === 0) {
+      setTransferStatus("请先选择要移动的文件或文件夹");
+      return;
+    }
+
+    setBatchMoveDialogKey((prev) => prev + 1);
+    setShowBatchMoveDialog(true);
+  }, [selectedPaths.size]);
+
+  const executeBatchMove = useCallback(
+    (destinationInput: string) => {
+      let destinationDirPath = "/";
+      try {
+        destinationDirPath = normalizePath(destinationInput);
+      } catch {
+        setErrorToast("目标目录路径不合法");
+        return;
+      }
+
+      const selectedEntries = entries.filter((entry) => selectedPaths.has(entry.path ?? entry.name));
+      if (selectedEntries.length === 0) {
+        setErrorToast("未找到可移动的已选项目");
+        return;
+      }
+
+      closeBatchMoveDialog();
+      void executeMoveEntries(selectedEntries, destinationDirPath, destinationDirPath);
+    },
+    [closeBatchMoveDialog, entries, executeMoveEntries, selectedPaths],
+  );
+
+  const executeCreateEntry = useCallback(
+    async (entryType: "file" | "directory", name: string) => {
+      if (!connectionId) return;
+
+      const noun = entryType === "file" ? "文件" : "文件夹";
+      const action = entryType === "file" ? "create_file" : "create_directory";
+      const targetPath = childPath(currentPath, name);
+      clearToasts();
+      setIsMoving(true);
+      setTransferStatus(`正在创建${noun}：${name}`);
+
+      try {
+        const response = await fetch(`/api/connections/${encodeURIComponent(connectionId)}/files/batch`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, path: targetPath }),
+        });
+        const payload = (await response.json()) as unknown;
+
+        if (!response.ok) {
+          const apiError = parseErrorPayload(payload);
+          throw new Error(apiError?.message ?? `创建${noun}失败`);
+        }
+
+        setSuccessToast(`已创建${noun}：${name}`);
+        setTransferStatus(`创建完成：${name}`);
+        await loadDirectory(currentPath, { keepLoading: true });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : `创建${noun}失败`;
+        setErrorToast(message);
+        setTransferStatus(`创建失败：${name}`);
+      } finally {
+        setIsMoving(false);
+      }
+    },
+    [clearToasts, connectionId, currentPath, loadDirectory],
+  );
+
+  const openCreateEntryDialog = useCallback((entryType: "file" | "directory") => {
+    setCreateEntryDialogType(entryType);
+    setCreateEntryDialogKey((prev) => prev + 1);
+    setShowCreateEntryDialog(true);
+  }, []);
+
+  const handleCreateEntryConfirm = useCallback(
+    (inputName: string) => {
+      const noun = createEntryDialogType === "file" ? "文件" : "文件夹";
+      const name = normalizeEntryName(inputName);
+
+      if (!name) {
+        setErrorToast(`${noun}名称不合法`);
+        return;
+      }
+
+      closeCreateEntryDialog();
+      void executeCreateEntry(createEntryDialogType, name);
+    },
+    [closeCreateEntryDialog, createEntryDialogType, executeCreateEntry],
+  );
+
+  const handleCreateFile = useCallback(() => {
+    openCreateEntryDialog("file");
+  }, [openCreateEntryDialog]);
+
+  const handleCreateFolder = useCallback(() => {
+    openCreateEntryDialog("directory");
+  }, [openCreateEntryDialog]);
+
   // --- Batch selection ---
   const entryFullPath = useCallback(
     (entry: FileEntry) => entry.path ?? entry.name,
@@ -250,6 +476,18 @@ export default function FileBrowserPage() {
         next.delete(path);
       } else {
         next.add(path);
+      }
+      return next;
+    });
+  }, []);
+
+  const handleSetPathSelected = useCallback((path: string, selected: boolean) => {
+    setSelectedPaths((prev) => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(path);
+      } else {
+        next.delete(path);
       }
       return next;
     });
@@ -358,7 +596,7 @@ export default function FileBrowserPage() {
             type="button"
             className="inline-flex h-9 items-center gap-2 rounded-md border border-border-default bg-bg-secondary px-3 text-sm text-text-primary transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             onClick={() => handleNavigate(parentPath(currentPath))}
-            disabled={!canGoParent || isLoading}
+            disabled={!canGoParent || isBusy}
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             返回上级
@@ -367,12 +605,15 @@ export default function FileBrowserPage() {
 
         <FileToolbar
           pathInput={pathInput}
-          isLoading={isLoading}
+          isLoading={isBusy}
           selectedCount={selectedPaths.size}
           onPathInputChangeAction={setPathInput}
           onPathSubmitAction={handlePathSubmit}
           onRefreshAction={handleRefresh}
+          onCreateFileAction={handleCreateFile}
+          onCreateFolderAction={handleCreateFolder}
           onUploadAction={handleUpload}
+          onBatchMoveAction={handleBatchMove}
           onBatchDeleteAction={() => setShowBatchDeleteDialog(true)}
         />
 
@@ -413,21 +654,40 @@ export default function FileBrowserPage() {
 
         <FileTable
           entries={entries}
-          isLoading={isLoading}
+          isLoading={isBusy}
           selectedPaths={selectedPaths}
           onOpenDirectoryAction={handleOpenDirectory}
           onDownloadAction={handleDownload}
           onEditAction={handleEdit}
+          onMoveEntriesAction={handleMoveEntries}
+          onSetPathSelectedAction={handleSetPathSelected}
           onToggleSelectAction={handleToggleSelect}
           onToggleSelectAllAction={handleToggleSelectAll}
         />
       </div>
+
+      <CreateEntryDialog
+        key={createEntryDialogKey}
+        entryType={createEntryDialogType}
+        isOpen={showCreateEntryDialog}
+        onConfirmAction={handleCreateEntryConfirm}
+        onCancelAction={closeCreateEntryDialog}
+      />
 
       <BatchDeleteDialog
         paths={Array.from(selectedPaths)}
         isOpen={showBatchDeleteDialog}
         onConfirmAction={executeBatchDelete}
         onCancelAction={closeBatchDeleteDialog}
+      />
+
+      <BatchMoveDialog
+        key={batchMoveDialogKey}
+        paths={Array.from(selectedPaths)}
+        initialDestination={currentPath}
+        isOpen={showBatchMoveDialog}
+        onConfirmAction={executeBatchMove}
+        onCancelAction={closeBatchMoveDialog}
       />
     </main>
   );
