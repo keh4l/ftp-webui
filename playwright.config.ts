@@ -10,14 +10,14 @@ export default defineConfig({
   reporter: [["list"], ["html", { outputFolder: ".sisyphus/evidence/playwright-report", open: "never" }]],
   outputDir: ".sisyphus/evidence/playwright-output",
   use: {
-    baseURL: "http://127.0.0.1:3000",
+    baseURL: "http://127.0.0.1:3001",
     trace: "on-first-retry",
     screenshot: "only-on-failure",
     video: "retain-on-failure",
   },
   webServer: {
-    command: "PLAYWRIGHT_TEST=1 APP_MASTER_KEY=test-key-for-build ADMIN_USERNAME=admin ADMIN_PASSWORD=test-pass pnpm dev --port 3000",
-    url: "http://127.0.0.1:3000/api/health",
+    command: "PLAYWRIGHT_TEST=1 APP_MASTER_KEY=test-key-for-build ADMIN_USERNAME=admin ADMIN_PASSWORD=test-pass pnpm dev",
+    url: "http://127.0.0.1:3001/api/health",
     reuseExistingServer: true,
     timeout: 120_000,
   },

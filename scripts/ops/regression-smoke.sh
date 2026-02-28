@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-BASE_URL="${BASE_URL:-http://localhost:3000}"
+BASE_URL="${BASE_URL:-http://localhost:3001}"
 CONNECTION_ID=""
 
 pass() {
