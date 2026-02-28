@@ -57,6 +57,7 @@ export class TransferService {
     });
 
     let bytesTransferred = 0;
+    let adapter: ProtocolAdapter | undefined;
 
     try {
       if (
@@ -67,7 +68,7 @@ export class TransferService {
         throw fileTooLarge(source.byteLength, opts.maxFileSize);
       }
 
-      const adapter = await this.resolveAdapter(connectionId);
+      adapter = await this.resolveAdapter(connectionId);
       this.setStatus(transferId, { state: "transferring", progress: { transferred: 0 } });
 
       logger.info(
@@ -146,6 +147,8 @@ export class TransferService {
         durationMs,
         error: errorMessage,
       };
+    } finally {
+      await adapter?.disconnect().catch(() => {});
     }
   }
 
@@ -201,6 +204,8 @@ export class TransferService {
           },
           "Download transfer completed",
         );
+
+        void adapter.disconnect().catch(() => {});
       });
 
       stream.once("error", (error) => {
@@ -222,6 +227,8 @@ export class TransferService {
           },
           "Download transfer failed",
         );
+
+        void adapter.disconnect().catch(() => {});
       });
 
       return stream;

@@ -57,26 +57,30 @@ export class EditService {
     const safePath = validateRemotePath(remotePath);
     const adapter = await this.getAdapter(connectionId);
     const maxSize = opts?.maxSize ?? DEFAULT_MAX_EDIT_SIZE;
-    const file = await adapter.stat(safePath);
+    try {
+      const file = await adapter.stat(safePath);
 
-    if (file.size !== null && file.size > maxSize) {
-      throw fileTooLarge(file.size, maxSize);
+      if (file.size !== null && file.size > maxSize) {
+        throw fileTooLarge(file.size, maxSize);
+      }
+
+      const text = await adapter.readText(safePath, { maxSize });
+
+      logger.info(
+        {
+          connectionId,
+          remotePath: safePath,
+          etag: text.etag,
+          encoding: text.encoding,
+          size: file.size,
+        },
+        "Text file read for online editing",
+      );
+
+      return text;
+    } finally {
+      await adapter.disconnect().catch(() => {});
     }
-
-    const text = await adapter.readText(safePath, { maxSize });
-
-    logger.info(
-      {
-        connectionId,
-        remotePath: safePath,
-        etag: text.etag,
-        encoding: text.encoding,
-        size: file.size,
-      },
-      "Text file read for online editing",
-    );
-
-    return text;
   }
 
   async writeText(
@@ -91,56 +95,63 @@ export class EditService {
       etag: opts?.etag,
       encoding: opts?.encoding,
     };
+    try {
+      await adapter.writeText(safePath, content, writeOptions);
 
-    await adapter.writeText(safePath, content, writeOptions);
-
-    logger.info(
-      {
-        connectionId,
-        remotePath: safePath,
-        etagProvided: opts?.etag !== undefined,
-        encoding: opts?.encoding,
-        contentLength: content.length,
-      },
-      "Text file saved from online editing",
-    );
+      logger.info(
+        {
+          connectionId,
+          remotePath: safePath,
+          etagProvided: opts?.etag !== undefined,
+          encoding: opts?.encoding,
+          contentLength: content.length,
+        },
+        "Text file saved from online editing",
+      );
+    } finally {
+      await adapter.disconnect().catch(() => {});
+    }
   }
 
   async isEditable(connectionId: string, remotePath: string): Promise<EditableCheck> {
     const safePath = validateRemotePath(remotePath);
     const adapter = await this.getAdapter(connectionId);
-    const file = await adapter.stat(safePath);
-    const size = file.size ?? undefined;
+    try {
+      const file = await adapter.stat(safePath);
+      const size = file.size ?? undefined;
 
-    if (file.type !== "file") {
+      if (file.type !== "file") {
+        return {
+          editable: false,
+          reason: "not_file",
+          size,
+        };
+      }
+
+      if (size !== undefined && size > DEFAULT_MAX_EDIT_SIZE) {
+        return {
+          editable: false,
+          reason: "file_too_large",
+          size,
+        };
+      }
+
+      const extension = path.posix.extname(safePath.replaceAll("\\\\", "/")).toLowerCase();
+      if (!EDITABLE_EXTENSIONS.has(extension)) {
+        return {
+          editable: false,
+          reason: "unsupported_extension",
+          size,
+        };
+      }
+
       return {
-        editable: false,
-        reason: "not_file",
+        editable: true,
         size,
       };
+    } finally {
+      await adapter.disconnect().catch(() => {});
     }
-
-    if (size !== undefined && size > DEFAULT_MAX_EDIT_SIZE) {
-      return {
-        editable: false,
-        reason: "file_too_large",
-        size,
-      };
-    }
-
-    const extension = path.posix.extname(safePath.replaceAll("\\", "/")).toLowerCase();
-    if (!EDITABLE_EXTENSIONS.has(extension)) {
-      return {
-        editable: false,
-        reason: "unsupported_extension",
-        size,
-      };
-    }
-
-    return {
-      editable: true,
-      size,
-    };
   }
 }
 

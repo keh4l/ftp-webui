@@ -31,22 +31,26 @@ export class BrowseService {
     );
 
     const adapter = await this.getAdapter(connectionId);
-    const entries = await adapter.list(normalizedPath);
+    try {
+      const entries = await adapter.list(normalizedPath);
 
-    const normalizedEntries = entries
-      .map((entry) => this.normalizeEntry(entry, normalizedPath))
-      .filter((entry): entry is FileEntry => entry !== null);
+      const normalizedEntries = entries
+        .map((entry) => this.normalizeEntry(entry, normalizedPath))
+        .filter((entry): entry is FileEntry => entry !== null);
 
-    logger.info(
-      {
-        connectionId,
-        remotePath: normalizedPath,
-        entryCount: normalizedEntries.length,
-      },
-      "Listed remote directory",
-    );
+      logger.info(
+        {
+          connectionId,
+          remotePath: normalizedPath,
+          entryCount: normalizedEntries.length,
+        },
+        "Listed remote directory",
+      );
 
-    return normalizedEntries;
+      return normalizedEntries;
+    } finally {
+      await adapter.disconnect().catch(() => {});
+    }
   }
 
   async stat(connectionId: string, remotePath: string): Promise<FileEntry> {
@@ -60,19 +64,23 @@ export class BrowseService {
     );
 
     const adapter = await this.getAdapter(connectionId);
-    const entry = await adapter.stat(normalizedPath);
-    const normalizedEntry = this.normalizeStatEntry(entry, normalizedPath);
+    try {
+      const entry = await adapter.stat(normalizedPath);
+      const normalizedEntry = this.normalizeStatEntry(entry, normalizedPath);
 
-    logger.info(
-      {
-        connectionId,
-        remotePath: normalizedPath,
-        type: normalizedEntry.type,
-      },
-      "Stated remote entry",
-    );
+      logger.info(
+        {
+          connectionId,
+          remotePath: normalizedPath,
+          type: normalizedEntry.type,
+        },
+        "Stated remote entry",
+      );
 
-    return normalizedEntry;
+      return normalizedEntry;
+    } finally {
+      await adapter.disconnect().catch(() => {});
+    }
   }
 
   private normalizeEntry(entry: FileEntry, basePath: string): FileEntry | null {
