@@ -15,7 +15,10 @@ type AuditAction =
   | "connection.update"
   | "connection.delete"
   | "connection.test"
-  | "file.batch_delete";
+  | "file.batch_delete"
+  | "file.move"
+  | "file.create_file"
+  | "file.create_directory";
 
 type AuditResult = "success" | "failure";
 

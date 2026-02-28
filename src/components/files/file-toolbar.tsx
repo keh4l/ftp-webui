@@ -1,4 +1,4 @@
-import { RefreshCw, Trash2, Upload } from "lucide-react";
+import { FolderPlus, FilePlus2, RefreshCw, Shuffle, Trash2, Upload } from "lucide-react";
 import { useRef } from "react";
 
 type FileToolbarProps = {
@@ -8,7 +8,10 @@ type FileToolbarProps = {
   onPathInputChangeAction: (value: string) => void;
   onPathSubmitAction: () => void;
   onRefreshAction: () => void;
+  onCreateFileAction: () => void;
+  onCreateFolderAction: () => void;
   onUploadAction: (file: File) => void;
+  onBatchMoveAction: () => void;
   onBatchDeleteAction: () => void;
 };
 
@@ -19,7 +22,10 @@ export function FileToolbar({
   onPathInputChangeAction,
   onPathSubmitAction,
   onRefreshAction,
+  onCreateFileAction,
+  onCreateFolderAction,
   onUploadAction,
+  onBatchMoveAction,
   onBatchDeleteAction,
 }: FileToolbarProps) {
   const uploadInputRef = useRef<HTMLInputElement | null>(null);
@@ -52,6 +58,39 @@ export function FileToolbar({
       </form>
 
       <div className="flex items-center gap-2">
+        <button
+          type="button"
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-border-default bg-bg-primary px-3 text-sm text-text-primary transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          onClick={onCreateFileAction}
+          disabled={isLoading}
+          data-testid="file-create-btn"
+        >
+          <FilePlus2 className="h-4 w-4" aria-hidden="true" />
+          新建文件
+        </button>
+
+        <button
+          type="button"
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-border-default bg-bg-primary px-3 text-sm text-text-primary transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          onClick={onCreateFolderAction}
+          disabled={isLoading}
+          data-testid="folder-create-btn"
+        >
+          <FolderPlus className="h-4 w-4" aria-hidden="true" />
+          新建文件夹
+        </button>
+
+        <button
+          type="button"
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-border-default bg-bg-primary px-3 text-sm text-text-primary transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          onClick={onBatchMoveAction}
+          disabled={isLoading || selectedCount === 0}
+          data-testid="batch-move-btn"
+        >
+          <Shuffle className="h-4 w-4" aria-hidden="true" />
+          批量移动
+        </button>
+
         <button
           type="button"
           className="inline-flex h-10 items-center gap-2 rounded-md border border-red-500/60 bg-red-500/10 px-3 text-sm text-red-400 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
