@@ -1,0 +1,7 @@
+# Scope this repository to the FTP_Web project directory only.
+/*
+!/.gitignore
+!/Documents/
+/Documents/*
+!/Documents/FTP_Web/
+!/Documents/FTP_Web/**
