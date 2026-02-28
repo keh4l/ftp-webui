@@ -36,3 +36,4 @@ next-env.d.ts
 # local agent/runtime artifacts
 .omc/
 .opencode/
+.sisyphus/

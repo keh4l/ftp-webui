@@ -1,7 +1,0 @@
-total_operations=80
-outage_duration_ms=220
-success_count=80
-fail_count=0
-success_rate=100.00%
-retry_metrics={"attempts":163,"retries":83,"successes":80,"failures":0,"exhausted":0,"timeouts":83,"circuitOpenRejects":0}
-pool_metrics={"active":0,"idle":20,"total":20,"waiting":0,"maxConnections":20,"metrics":{"acquireRequests":80,"acquireWaits":60,"acquireTimeouts":0,"created":20,"reused":60,"released":80,"destroyed":0,"idleEvictions":0}}
