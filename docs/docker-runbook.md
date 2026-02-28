@@ -4,7 +4,7 @@
 
 - Docker Engine >= 24
 - Docker Compose Plugin >= 2.20
-- 可用端口：`3000`、`21`、`21100-21110`、`2222`
+- 可用端口：`3001`、`21`、`21100-21110`、`2222`
 
 ## 2. 环境变量
 
@@ -33,7 +33,7 @@ docker compose ps
 健康检查：
 
 ```bash
-curl -fsS http://localhost:3000/api/health
+curl -fsS http://localhost:3001/api/health
 ```
 
 期望返回：
@@ -49,7 +49,7 @@ git pull
 docker compose build
 docker compose up -d
 docker compose ps
-curl -fsS http://localhost:3000/api/health
+curl -fsS http://localhost:3001/api/health
 ```
 
 升级后执行回归：
@@ -76,7 +76,7 @@ cp .env "backup/env-$(date +%Y%m%d-%H%M%S).bak"
 cp backup/ftp-webui-<timestamp>.sqlite .data/ftp-webui.sqlite
 cp backup/env-<timestamp>.bak .env
 docker compose up -d
-curl -fsS http://localhost:3000/api/health
+curl -fsS http://localhost:3001/api/health
 ```
 
 ## 6. 回滚策略

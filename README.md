@@ -60,7 +60,7 @@ ADMIN_PASSWORD=your-admin-password
 pnpm dev
 ```
 
-打开：`http://localhost:3000`
+打开：`http://localhost:3001`
 
 ## 质量检查
 
@@ -82,7 +82,7 @@ docker compose ps
 健康检查：
 
 ```bash
-curl -fsS http://localhost:3000/api/health
+curl -fsS http://localhost:3001/api/health
 ```
 
 更完整的部署/回归/备份说明见：`docs/docker-runbook.md`
