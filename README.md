@@ -77,6 +77,8 @@ docker compose up -d --build
 docker compose ps
 ```
 
+> 提示：`docker compose` 会读取项目根目录 `.env` 里的 `APP_MASTER_KEY`、`ADMIN_USERNAME`、`ADMIN_PASSWORD` 作为登录配置。
+
 健康检查：
 
 ```bash

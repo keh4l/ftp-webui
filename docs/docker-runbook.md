@@ -12,12 +12,15 @@
 
 ```bash
 APP_MASTER_KEY=replace-with-strong-master-key
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=replace-with-strong-admin-password
 NODE_ENV=production
 ```
 
 说明：
 
 - `APP_MASTER_KEY` 必填，用于连接凭据加密。
+- `ADMIN_USERNAME` / `ADMIN_PASSWORD` 为登录凭据，`docker compose` 会优先读取 `.env` 里的值。
 - 生产环境不要设置 `ALLOW_PRIVATE_NETWORKS=true`。
 
 ## 3. 首次部署
