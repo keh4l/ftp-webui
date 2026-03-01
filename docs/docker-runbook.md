@@ -15,12 +15,14 @@ APP_MASTER_KEY=replace-with-strong-master-key
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=replace-with-strong-admin-password
 NODE_ENV=production
+SESSION_COOKIE_SECURE=auto
 ```
 
 说明：
 
 - `APP_MASTER_KEY` 必填，用于连接凭据加密。
 - `ADMIN_USERNAME` / `ADMIN_PASSWORD` 为登录凭据，`docker compose` 会优先读取 `.env` 里的值。
+- `SESSION_COOKIE_SECURE` 支持 `auto` / `always` / `never`，建议使用 `auto`。
 - 生产环境不要设置 `ALLOW_PRIVATE_NETWORKS=true`。
 
 ## 3. 首次部署
@@ -94,3 +96,4 @@ curl -fsS http://localhost:3001/api/health
 - 健康检查失败：先看 `docker compose logs app`。
 - 连接测试异常：确认目标 FTP/FTPS/SFTP 可达，且未触发 SSRF 限制。
 - 端口冲突：修改 `docker-compose.yml` 映射并同步运维文档。
+- 登录后立刻跳回登录页：检查访问协议与 `SESSION_COOKIE_SECURE` 配置；若为 `http://IP:端口`，优先保持 `SESSION_COOKIE_SECURE=auto`。

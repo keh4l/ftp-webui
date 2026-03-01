@@ -4,6 +4,7 @@ const envSchema = z.object({
   APP_MASTER_KEY: z.string().min(1, "APP_MASTER_KEY must not be empty"),
   ADMIN_USERNAME: z.string().min(1, "ADMIN_USERNAME must not be empty").default("admin"),
   ADMIN_PASSWORD: z.string().min(1, "ADMIN_PASSWORD must not be empty"),
+  SESSION_COOKIE_SECURE: z.enum(["auto", "always", "never"]).default("auto"),
 });
 
 function validateEnv() {
@@ -13,7 +14,7 @@ function validateEnv() {
     throw new Error(
       "❌ Environment validation failed:" +
         `\n${formatted}` +
-        "\n\nMissing or invalid: APP_MASTER_KEY, ADMIN_USERNAME, ADMIN_PASSWORD"
+        "\n\nCheck APP_MASTER_KEY, ADMIN_USERNAME, ADMIN_PASSWORD, SESSION_COOKIE_SECURE"
     );
   }
   return result.data;

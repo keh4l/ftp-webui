@@ -6,17 +6,56 @@ import { env } from "@/lib/env";
 export const SESSION_COOKIE_NAME = "ftp-webui-session";
 export const SESSION_MAX_AGE_SECONDS = 24 * 60 * 60;
 
+type SessionCookieSecureMode = "auto" | "always" | "never";
+type RequestLike = Pick<Request, "headers" | "url">;
+
 type SessionPayload = {
   username: string;
 };
 
-const sessionCookieOptions = {
+const baseSessionCookieOptions = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
   sameSite: "lax" as const,
   path: "/",
   maxAge: SESSION_MAX_AGE_SECONDS,
 };
+
+function resolveSessionCookieSecureMode(): SessionCookieSecureMode {
+  return env.SESSION_COOKIE_SECURE;
+}
+
+function resolveSessionCookieSecure(request: RequestLike): boolean {
+  const mode = resolveSessionCookieSecureMode();
+  if (mode === "always") {
+    return true;
+  }
+
+  if (mode === "never") {
+    return false;
+  }
+
+  const forwardedProto = request.headers
+    .get("x-forwarded-proto")
+    ?.split(",", 1)[0]
+    ?.trim()
+    .toLowerCase();
+  if (forwardedProto === "https") {
+    return true;
+  }
+
+  if (forwardedProto === "http") {
+    return false;
+  }
+
+  return new URL(request.url).protocol === "https:";
+}
+
+function getSessionCookieOptions(request: RequestLike) {
+  return {
+    ...baseSessionCookieOptions,
+    secure: resolveSessionCookieSecure(request),
+  };
+}
 
 function encodePayload(payload: SessionPayload): string {
   return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
@@ -88,13 +127,13 @@ export function verifySessionToken(token: string | undefined): SessionPayload | 
   return decodePayload(encodedPayload);
 }
 
-export function setSessionCookie(response: NextResponse, username: string): void {
-  response.cookies.set(SESSION_COOKIE_NAME, createSessionToken(username), sessionCookieOptions);
+export function setSessionCookie(response: NextResponse, username: string, request: RequestLike): void {
+  response.cookies.set(SESSION_COOKIE_NAME, createSessionToken(username), getSessionCookieOptions(request));
 }
 
-export function clearSessionCookie(response: NextResponse): void {
+export function clearSessionCookie(response: NextResponse, request: RequestLike): void {
   response.cookies.set(SESSION_COOKIE_NAME, "", {
-    ...sessionCookieOptions,
+    ...getSessionCookieOptions(request),
     maxAge: 0,
   });
 }

@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     const response = jsonResponse({ authenticated: true }, 200);
-    setSessionCookie(response, username);
+    setSessionCookie(response, username, request);
     return response;
   } catch (error) {
     return handleApiError(error);

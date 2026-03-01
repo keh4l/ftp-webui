@@ -50,9 +50,11 @@ cp .env.example .env.local
 APP_MASTER_KEY=your-secret-key-here
 ADMIN_USERNAME=admin
 ADMIN_PASSWORD=your-admin-password
+SESSION_COOKIE_SECURE=auto
 ```
 
 > `APP_MASTER_KEY` 用于加密连接凭据，生产环境请使用高强度随机值。
+> `SESSION_COOKIE_SECURE` 可选值：`auto`（默认，按请求协议自动判断）、`always`（始终 Secure，仅 HTTPS）、`never`（始终非 Secure，仅内网临时排障建议）。
 
 ### 3) 启动开发服务
 
