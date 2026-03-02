@@ -12,6 +12,11 @@ import { BatchResultPanel } from "@/components/files/batch-result-panel";
 import { FileBreadcrumb } from "@/components/files/file-breadcrumb";
 import { FileTable } from "@/components/files/file-table";
 import { FileToolbar } from "@/components/files/file-toolbar";
+import {
+  sortFileEntries,
+  type FileSortDirection,
+  type FileSortField,
+} from "@/lib/file/sort";
 import type { FileEntry } from "@/lib/protocol/types";
 
 type ApiErrorResponse = {
@@ -77,6 +82,8 @@ export default function FileBrowserPage() {
 
   const [currentPath, setCurrentPath] = useState("/");
   const [pathInput, setPathInput] = useState("/");
+  const [sortField, setSortField] = useState<FileSortField>("name");
+  const [sortDirection, setSortDirection] = useState<FileSortDirection>("asc");
   const [entries, setEntries] = useState<FileEntry[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isMoving, setIsMoving] = useState(false);
@@ -157,14 +164,9 @@ export default function FileBrowserPage() {
         }
 
         const files = Array.isArray(payload) ? (payload as FileEntry[]) : [];
-        const sorted = [...files].sort((left, right) => {
-          if (left.type === "directory" && right.type !== "directory") return -1;
-          if (left.type !== "directory" && right.type === "directory") return 1;
-          return left.name.localeCompare(right.name, "zh-CN", { numeric: true, sensitivity: "base" });
-        });
 
         setConnectionMissing(false);
-        setEntries(sorted);
+        setEntries(files);
         setCurrentPath(normalizedPath);
         setPathInput(normalizedPath);
         setSelectedPaths(new Set());
@@ -191,6 +193,10 @@ export default function FileBrowserPage() {
   const canGoParent = currentPath !== "/";
   const isBusy = isLoading || isMoving;
   const pageTitle = useMemo(() => `文件浏览 · ${currentPath}`, [currentPath]);
+  const sortedEntries = useMemo(
+    () => sortFileEntries(entries, sortField, sortDirection),
+    [entries, sortDirection, sortField],
+  );
 
   const handleNavigate = useCallback(
     (targetPath: string) => {
@@ -607,9 +613,15 @@ export default function FileBrowserPage() {
           pathInput={pathInput}
           isLoading={isBusy}
           selectedCount={selectedPaths.size}
+          sortField={sortField}
+          sortDirection={sortDirection}
           onPathInputChangeAction={setPathInput}
           onPathSubmitAction={handlePathSubmit}
           onRefreshAction={handleRefresh}
+          onSortFieldChangeAction={setSortField}
+          onSortDirectionToggleAction={() =>
+            setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"))
+          }
           onCreateFileAction={handleCreateFile}
           onCreateFolderAction={handleCreateFolder}
           onUploadAction={handleUpload}
@@ -653,7 +665,7 @@ export default function FileBrowserPage() {
         ) : null}
 
         <FileTable
-          entries={entries}
+          entries={sortedEntries}
           isLoading={isBusy}
           selectedPaths={selectedPaths}
           onOpenDirectoryAction={handleOpenDirectory}

@@ -1,13 +1,19 @@
-import { FolderPlus, FilePlus2, RefreshCw, Shuffle, Trash2, Upload } from "lucide-react";
+import { ArrowUpDown, FolderPlus, FilePlus2, RefreshCw, Shuffle, Trash2, Upload } from "lucide-react";
 import { useRef } from "react";
+
+import type { FileSortDirection, FileSortField } from "@/lib/file/sort";
 
 type FileToolbarProps = {
   pathInput: string;
   isLoading: boolean;
   selectedCount: number;
+  sortField: FileSortField;
+  sortDirection: FileSortDirection;
   onPathInputChangeAction: (value: string) => void;
   onPathSubmitAction: () => void;
   onRefreshAction: () => void;
+  onSortFieldChangeAction: (field: FileSortField) => void;
+  onSortDirectionToggleAction: () => void;
   onCreateFileAction: () => void;
   onCreateFolderAction: () => void;
   onUploadAction: (file: File) => void;
@@ -19,9 +25,13 @@ export function FileToolbar({
   pathInput,
   isLoading,
   selectedCount,
+  sortField,
+  sortDirection,
   onPathInputChangeAction,
   onPathSubmitAction,
   onRefreshAction,
+  onSortFieldChangeAction,
+  onSortDirectionToggleAction,
   onCreateFileAction,
   onCreateFolderAction,
   onUploadAction,
@@ -56,6 +66,34 @@ export function FileToolbar({
           前往
         </button>
       </form>
+
+      <div className="flex items-center gap-2">
+        <label htmlFor="file-sort-field" className="text-xs text-text-secondary">
+          排序
+        </label>
+        <select
+          id="file-sort-field"
+          value={sortField}
+          onChange={(event) => onSortFieldChangeAction(event.target.value as FileSortField)}
+          disabled={isLoading}
+          className="h-10 rounded-md border border-border-default bg-bg-primary px-3 text-sm text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          data-testid="file-sort-field-select"
+        >
+          <option value="name">按名称</option>
+          <option value="size">按大小</option>
+          <option value="modifiedAt">按修改时间</option>
+        </select>
+        <button
+          type="button"
+          className="inline-flex h-10 items-center gap-2 rounded-md border border-border-default bg-bg-primary px-3 text-sm text-text-primary transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          onClick={onSortDirectionToggleAction}
+          disabled={isLoading}
+          data-testid="file-sort-direction-btn"
+        >
+          <ArrowUpDown className="h-4 w-4" aria-hidden="true" />
+          {sortDirection === "asc" ? "升序" : "降序"}
+        </button>
+      </div>
 
       <div className="flex items-center gap-2">
         <button
