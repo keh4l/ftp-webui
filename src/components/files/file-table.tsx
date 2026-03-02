@@ -1,15 +1,19 @@
-import { Download, Edit3, File, Folder } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Download, Edit3, File, Folder } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
+import type { FileSortDirection, FileSortField } from "@/lib/file/sort";
 import type { FileEntry } from "@/lib/protocol/types";
 
 type FileTableProps = {
   entries: FileEntry[];
   isLoading: boolean;
   selectedPaths: Set<string>;
+  sortField: FileSortField;
+  sortDirection: FileSortDirection;
   onOpenDirectoryAction: (entry: FileEntry) => void;
   onDownloadAction: (entry: FileEntry) => void;
   onEditAction: (entry: FileEntry) => void;
+  onSortFieldToggleAction: (field: FileSortField) => void;
   onMoveEntriesAction: (sourceEntries: FileEntry[], destinationDirectory: FileEntry) => void;
   onSetPathSelectedAction: (entryPath: string, selected: boolean) => void;
   onToggleSelectAction: (entryPath: string) => void;
@@ -74,13 +78,28 @@ function typeLabel(type: FileEntry["type"]): string {
   }
 }
 
+function sortIcon(field: FileSortField, currentField: FileSortField, direction: FileSortDirection) {
+  if (field !== currentField) {
+    return <ArrowUpDown className="h-3.5 w-3.5 text-text-secondary" aria-hidden="true" />;
+  }
+
+  return direction === "asc" ? (
+    <ArrowUp className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+  ) : (
+    <ArrowDown className="h-3.5 w-3.5 text-accent" aria-hidden="true" />
+  );
+}
+
 export function FileTable({
   entries,
   isLoading,
   selectedPaths,
+  sortField,
+  sortDirection,
   onOpenDirectoryAction,
   onDownloadAction,
   onEditAction,
+  onSortFieldToggleAction,
   onMoveEntriesAction,
   onSetPathSelectedAction,
   onToggleSelectAction,
@@ -157,10 +176,46 @@ export function FileTable({
                   data-testid="file-select-all"
                 />
               </th>
-              <th className="px-4 py-3 font-medium">名称</th>
+              <th className="px-4 py-3 font-medium">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md px-1 py-1 transition hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => onSortFieldToggleAction("name")}
+                  disabled={isLoading || entries.length === 0}
+                  data-testid="file-sort-header-name"
+                  aria-label={`按名称排序，当前${sortField === "name" && sortDirection === "desc" ? "降序" : "升序"}`}
+                >
+                  <span>名称</span>
+                  {sortIcon("name", sortField, sortDirection)}
+                </button>
+              </th>
               <th className="px-4 py-3 font-medium">类型</th>
-              <th className="px-4 py-3 font-medium">大小</th>
-              <th className="px-4 py-3 font-medium">修改时间</th>
+              <th className="px-4 py-3 font-medium">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md px-1 py-1 transition hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => onSortFieldToggleAction("size")}
+                  disabled={isLoading || entries.length === 0}
+                  data-testid="file-sort-header-size"
+                  aria-label={`按大小排序，当前${sortField === "size" && sortDirection === "desc" ? "降序" : "升序"}`}
+                >
+                  <span>大小</span>
+                  {sortIcon("size", sortField, sortDirection)}
+                </button>
+              </th>
+              <th className="px-4 py-3 font-medium">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1.5 rounded-md px-1 py-1 transition hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={() => onSortFieldToggleAction("modifiedAt")}
+                  disabled={isLoading || entries.length === 0}
+                  data-testid="file-sort-header-modifiedAt"
+                  aria-label={`按修改时间排序，当前${sortField === "modifiedAt" && sortDirection === "desc" ? "降序" : "升序"}`}
+                >
+                  <span>修改时间</span>
+                  {sortIcon("modifiedAt", sortField, sortDirection)}
+                </button>
+              </th>
               <th className="px-4 py-3 font-medium">操作</th>
             </tr>
           </thead>

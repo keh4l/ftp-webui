@@ -198,6 +198,14 @@ export default function FileBrowserPage() {
     [entries, sortDirection, sortField],
   );
 
+  const handleSortFieldToggle = useCallback(
+    (field: FileSortField) => {
+      setSortDirection(sortField === field ? (sortDirection === "asc" ? "desc" : "asc") : "asc");
+      setSortField(field);
+    },
+    [sortDirection, sortField],
+  );
+
   const handleNavigate = useCallback(
     (targetPath: string) => {
       clearToasts();
@@ -613,15 +621,9 @@ export default function FileBrowserPage() {
           pathInput={pathInput}
           isLoading={isBusy}
           selectedCount={selectedPaths.size}
-          sortField={sortField}
-          sortDirection={sortDirection}
           onPathInputChangeAction={setPathInput}
           onPathSubmitAction={handlePathSubmit}
           onRefreshAction={handleRefresh}
-          onSortFieldChangeAction={setSortField}
-          onSortDirectionToggleAction={() =>
-            setSortDirection((previous) => (previous === "asc" ? "desc" : "asc"))
-          }
           onCreateFileAction={handleCreateFile}
           onCreateFolderAction={handleCreateFolder}
           onUploadAction={handleUpload}
@@ -668,9 +670,12 @@ export default function FileBrowserPage() {
           entries={sortedEntries}
           isLoading={isBusy}
           selectedPaths={selectedPaths}
+          sortField={sortField}
+          sortDirection={sortDirection}
           onOpenDirectoryAction={handleOpenDirectory}
           onDownloadAction={handleDownload}
           onEditAction={handleEdit}
+          onSortFieldToggleAction={handleSortFieldToggle}
           onMoveEntriesAction={handleMoveEntries}
           onSetPathSelectedAction={handleSetPathSelected}
           onToggleSelectAction={handleToggleSelect}

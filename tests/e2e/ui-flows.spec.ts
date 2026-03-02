@@ -183,6 +183,100 @@ test.describe("T22 UI flows", () => {
     await expect(page.getByTestId("file-row-playwright-upload.txt")).toBeVisible();
   });
 
+  test("文件页：点击表头列名排序", async ({ page }) => {
+    const entries: FileEntry[] = [
+      {
+        name: "docs",
+        path: "/docs",
+        type: "directory",
+        size: null,
+        modifiedAt: "2024-01-01T00:00:00.000Z",
+        permissions: null,
+      },
+      {
+        name: "z-last.txt",
+        path: "/z-last.txt",
+        type: "file",
+        size: 30,
+        modifiedAt: "2024-06-01T00:00:00.000Z",
+        permissions: null,
+      },
+      {
+        name: "a-first.txt",
+        path: "/a-first.txt",
+        type: "file",
+        size: 5,
+        modifiedAt: "2024-01-15T00:00:00.000Z",
+        permissions: null,
+      },
+      {
+        name: "middle.txt",
+        path: "/middle.txt",
+        type: "file",
+        size: null,
+        modifiedAt: null,
+        permissions: null,
+      },
+    ];
+
+    await page.route(/\/api\/connections\/c1\/files\?/, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(entries),
+      });
+    });
+
+    await page.goto("/files/c1");
+    await expect(page.getByTestId("file-row-docs")).toBeVisible();
+    await expect(page.getByTestId("file-sort-field-select")).toHaveCount(0);
+    await expect(page.getByTestId("file-sort-direction-btn")).toHaveCount(0);
+
+    const getRowOrder = async (): Promise<string[]> =>
+      page
+        .locator("tr[data-testid^='file-row-']")
+        .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-testid") ?? ""));
+
+    await expect.poll(getRowOrder).toEqual([
+      "file-row-docs",
+      "file-row-a-first.txt",
+      "file-row-middle.txt",
+      "file-row-z-last.txt",
+    ]);
+
+    await page.getByTestId("file-sort-header-size").click();
+    await expect.poll(getRowOrder).toEqual([
+      "file-row-docs",
+      "file-row-a-first.txt",
+      "file-row-z-last.txt",
+      "file-row-middle.txt",
+    ]);
+
+    await page.getByTestId("file-sort-header-size").click();
+    await expect.poll(getRowOrder).toEqual([
+      "file-row-docs",
+      "file-row-z-last.txt",
+      "file-row-a-first.txt",
+      "file-row-middle.txt",
+    ]);
+
+    await page.getByTestId("file-sort-header-modifiedAt").click();
+    await expect.poll(getRowOrder).toEqual([
+      "file-row-docs",
+      "file-row-a-first.txt",
+      "file-row-z-last.txt",
+      "file-row-middle.txt",
+    ]);
+
+    await page.getByTestId("file-sort-header-modifiedAt").click();
+    await expect.poll(getRowOrder).toEqual([
+      "file-row-docs",
+      "file-row-z-last.txt",
+      "file-row-a-first.txt",
+      "file-row-middle.txt",
+    ]);
+  });
+
   test("文件页：非法路径提示 INVALID_PATH", async ({ page }) => {
     await page.route(/\/api\/connections\/c1\/files\?/, async (route) => {
       const url = new URL(route.request().url());
