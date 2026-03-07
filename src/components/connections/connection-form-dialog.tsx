@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { DialogShell } from "@/components/ui/dialog-shell";
 
 export type ConnectionFormValues = {
   protocol: "ftp" | "ftps" | "sftp";
@@ -161,42 +162,14 @@ export function ConnectionFormDialog({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-bg-deep/75 p-4"
-      onClick={(event) => {
-        if (event.currentTarget === event.target) {
-          onClose();
-        }
-      }}
+    <DialogShell
+      title={title}
+      description="填写连接参数，可先测试再保存。"
+      onClose={onClose}
+      panelClassName="max-w-xl rounded-2xl bg-bg-primary shadow-2xl"
+      closeOnOverlayClick
+      titleId="connection-form-title"
     >
-      <div
-        className="w-full max-w-xl rounded-2xl border border-border-default bg-bg-primary p-6 shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="connection-form-title"
-      >
-        <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
-            <h2
-              id="connection-form-title"
-              className="font-[family-name:var(--font-lexend)] text-xl font-semibold text-text-primary"
-            >
-              {title}
-            </h2>
-            <p className="mt-1 text-sm text-text-secondary">
-              填写连接参数，可先测试再保存。
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className={`rounded-md p-1 text-text-secondary transition hover:bg-bg-secondary hover:text-text-primary ${focusRingClass}`}
-            aria-label="关闭弹窗"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
         <form className="space-y-4" onSubmit={submitForm}>
           <div className="grid gap-4 md:grid-cols-2">
             <label className="space-y-1 text-sm text-text-secondary">
@@ -347,7 +320,6 @@ export function ConnectionFormDialog({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </DialogShell>
   );
 }

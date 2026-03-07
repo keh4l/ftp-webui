@@ -41,13 +41,14 @@ export function Toast({ toasts, onDismiss }: ToastProps) {
     <div className="pointer-events-none fixed right-4 top-4 z-50 flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-3">
       {toasts.map((toast) => {
         const isSuccess = toast.variant === "success";
+        const testId = isSuccess ? "toast-success" : "toast-error";
 
         return (
-          <div
+          <output
             key={toast.id}
             className="pointer-events-auto rounded-xl border border-border-default bg-bg-primary p-4 shadow-xl"
-            role="status"
             aria-live="polite"
+            data-testid={testId}
           >
             <div className="flex items-start gap-3">
               <span
@@ -72,7 +73,7 @@ export function Toast({ toasts, onDismiss }: ToastProps) {
                 <X className="h-4 w-4" />
               </button>
             </div>
-          </div>
+          </output>
         );
       })}
     </div>

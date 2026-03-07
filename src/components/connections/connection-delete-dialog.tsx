@@ -1,6 +1,7 @@
 import { useEffect } from "react";
-import { Loader2, Trash2, X } from "lucide-react";
+import { Loader2, Trash2 } from "lucide-react";
 import type { ConnectionItem } from "./connection-list";
+import { DialogShell } from "@/components/ui/dialog-shell";
 
 type ConnectionDeleteDialogProps = {
   open: boolean;
@@ -42,37 +43,13 @@ export function ConnectionDeleteDialog({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-40 flex items-center justify-center bg-bg-deep/75 p-4"
-      onClick={(event) => {
-        if (event.currentTarget === event.target) {
-          onClose();
-        }
-      }}
+    <DialogShell
+      title="删除连接"
+      onClose={onClose}
+      panelClassName="max-w-md rounded-2xl bg-bg-primary shadow-2xl"
+      closeOnOverlayClick
+      titleId="connection-delete-title"
     >
-      <div
-        className="w-full max-w-md rounded-2xl border border-border-default bg-bg-primary p-6 shadow-2xl"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="connection-delete-title"
-      >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <h2
-            id="connection-delete-title"
-            className="font-[family-name:var(--font-lexend)] text-lg font-semibold text-text-primary"
-          >
-            删除连接
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className={`rounded-md p-1 text-text-secondary transition hover:bg-bg-secondary hover:text-text-primary ${focusRingClass}`}
-            aria-label="关闭弹窗"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-
         <div className="rounded-xl border border-red-400/30 bg-red-500/10 p-4">
           <p className="text-sm text-text-primary">
             将永久删除连接 <strong>{connection.label?.trim() || connection.host}</strong>。
@@ -102,7 +79,6 @@ export function ConnectionDeleteDialog({
             确认删除
           </button>
         </div>
-      </div>
-    </div>
+    </DialogShell>
   );
 }

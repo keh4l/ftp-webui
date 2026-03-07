@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Plus, Server } from "lucide-react";
+import { Loader2, Plus, Search, Server, X } from "lucide-react";
 import {
   ConnectionDeleteDialog,
 } from "@/components/connections/connection-delete-dialog";
@@ -88,6 +88,7 @@ export default function ConnectionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<"create" | "edit">("create");
@@ -191,6 +192,25 @@ export default function ConnectionsPage() {
       label: editingConnection.label ?? "",
     };
   }, [editingConnection]);
+
+  const trimmedSearchQuery = searchQuery.trim().toLowerCase();
+  const filteredConnections = useMemo(() => {
+    if (!trimmedSearchQuery) {
+      return connections;
+    }
+
+    return connections.filter((connection) => {
+      const searchableFields = [
+        connection.label ?? "",
+        connection.host,
+        connection.username,
+        connection.protocol,
+        String(connection.port),
+      ];
+
+      return searchableFields.some((field) => field.toLowerCase().includes(trimmedSearchQuery));
+    });
+  }, [connections, trimmedSearchQuery]);
 
   const openCreateForm = () => {
     setFormMode("create");
@@ -433,6 +453,35 @@ export default function ConnectionsPage() {
               </button>
             </div>
           </div>
+
+          <div className="mt-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <label className="relative block w-full lg:max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-secondary" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="搜索标签、主机、用户、协议或端口"
+                className={`h-11 w-full rounded-lg border border-border-default bg-bg-secondary pl-10 pr-11 text-sm text-text-primary placeholder:text-text-secondary/70 ${focusRingClass}`}
+                data-testid="connection-search-input"
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className={`absolute right-2 top-1/2 inline-flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-text-secondary transition hover:bg-bg-primary hover:text-text-primary ${focusRingClass}`}
+                  aria-label="清空搜索"
+                  data-testid="connection-search-clear-btn"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
+            </label>
+
+            <p className="text-sm text-text-secondary">
+              {trimmedSearchQuery ? `显示 ${filteredConnections.length} / ${connections.length} 个连接` : `共 ${connections.length} 个连接`}
+            </p>
+          </div>
         </header>
 
         {pageError ? (
@@ -448,9 +497,27 @@ export default function ConnectionsPage() {
               正在加载连接列表...
             </div>
           </section>
+        ) : filteredConnections.length === 0 && connections.length > 0 ? (
+          <section className="rounded-2xl border border-dashed border-border-default bg-bg-primary p-10 text-center">
+            <div className="mx-auto max-w-md">
+              <h2 className="font-[family-name:var(--font-lexend)] text-xl font-semibold text-text-primary">
+                没有匹配的连接
+              </h2>
+              <p className="mt-2 text-sm text-text-secondary">
+                试试更短的关键词，或清空搜索查看全部连接。
+              </p>
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className={`mt-6 inline-flex items-center gap-2 rounded-lg border border-border-default bg-bg-secondary px-4 py-2 text-sm font-medium text-text-primary transition hover:border-accent/40 hover:text-accent ${focusRingClass}`}
+              >
+                清空搜索
+              </button>
+            </div>
+          </section>
         ) : (
           <ConnectionList
-            connections={connections}
+            connections={filteredConnections}
             statusById={statusById}
             deletingId={deletingId}
             onCreate={openCreateForm}
