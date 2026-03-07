@@ -1,9 +1,8 @@
 import { fileURLToPath } from "node:url";
-import { defineConfig } from "vitest/config";
 
 const rootDir = fileURLToPath(new URL("./", import.meta.url));
 
-export default defineConfig({
+const config = {
   resolve: {
     alias: {
       "@": `${rootDir}src`,
@@ -15,4 +14,6 @@ export default defineConfig({
     setupFiles: ["tests/setup.ts"],
     clearMocks: true,
   },
-});
+};
+
+export default config;

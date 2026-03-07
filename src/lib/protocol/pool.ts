@@ -158,6 +158,8 @@ export class ConnectionPool {
   }
 
   async destroyAll(): Promise<void> {
+    clearInterval(this.cleanupTimer);
+
     this.waiters.splice(0, this.waiters.length).forEach((waiter) => {
       clearTimeout(waiter.timeoutHandle);
       waiter.reject(

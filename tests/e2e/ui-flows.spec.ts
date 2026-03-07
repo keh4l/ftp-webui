@@ -116,6 +116,63 @@ test.describe("T22 UI flows", () => {
     await expect(page.getByTestId("connection-status").first()).toContainText("可用");
   });
 
+  test("连接页：搜索过滤与清空", async ({ page }) => {
+    const connections = [
+      {
+        id: "conn-prod",
+        protocol: "sftp" as const,
+        host: "prod.example.com",
+        port: 22,
+        username: "deploy",
+        maskedSecret: "****",
+        label: "生产环境",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      {
+        id: "conn-stage",
+        protocol: "ftp" as const,
+        host: "stage.example.com",
+        port: 21,
+        username: "tester",
+        maskedSecret: "****",
+        label: "预发环境",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+    ];
+
+    await page.route("**/api/connections", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(connections),
+      });
+    });
+
+    await page.route("**/api/auth/me", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ authenticated: true }),
+      });
+    });
+
+    await page.goto("/connections");
+    await expect(page.getByTestId("connection-search-input")).toBeVisible();
+
+    await expect(page.getByTestId("connection-item-conn-prod")).toBeVisible();
+    await expect(page.getByTestId("connection-item-conn-stage")).toBeVisible();
+
+    await page.getByTestId("connection-search-input").fill("prod");
+
+    await expect(page.getByTestId("connection-item-conn-prod")).toBeVisible();
+    await expect(page.getByTestId("connection-item-conn-stage")).toHaveCount(0);
+
+    await page.getByTestId("connection-search-clear-btn").click();
+    await expect(page.getByTestId("connection-item-conn-stage")).toBeVisible();
+  });
+
   test("文件页：浏览与上传", async ({ page}, testInfo) => {
     let uploaded = false;
     const baseEntries: FileEntry[] = [
@@ -379,6 +436,65 @@ test.describe("T22 UI flows", () => {
     await page.getByRole("button", { name: "覆盖保存" }).click();
     await expect(page.getByTestId("editor-conflict-warning")).toBeHidden();
     await expect(page.getByTestId("editor-textarea")).toBeVisible();
+  });
+
+  test("编辑页：快捷键保存与离页保护", async ({ page }) => {
+    let saveCount = 0;
+
+    await page.route(/\/api\/connections\/c1\/files\/editable\?/, async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ editable: true }),
+      });
+    });
+
+    await page.route(/\/api\/connections\/c1\/files\/edit(?:\?|$)/, async (route) => {
+      const request = route.request();
+
+      if (request.method() === "GET") {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ content: "v1", etag: "etag-1", encoding: "utf8" }),
+        });
+        return;
+      }
+
+      saveCount += 1;
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ success: true }),
+      });
+    });
+
+    await page.goto("/files/c1/edit?path=%2Fdemo.txt");
+    await expect(page.getByTestId("editor-textarea")).toBeVisible();
+
+    await page.getByTestId("editor-textarea").fill("changed-by-shortcut");
+
+    await page.evaluate(() => {
+      const dialogMessages: string[] = [];
+      window.confirm = (message?: string) => {
+        dialogMessages.push(message ?? "");
+        return false;
+      };
+      (window as typeof window & { __editorConfirmMessages?: string[] }).__editorConfirmMessages = dialogMessages;
+    });
+
+    await page.getByTestId("editor-back-btn").click({ force: true });
+
+    const dialogMessage = await page.evaluate(
+      () => (window as typeof window & { __editorConfirmMessages?: string[] }).__editorConfirmMessages?.[0],
+    );
+    expect(dialogMessage).toContain("未保存");
+
+    await expect(page).toHaveURL(/\/files\/c1\/edit\?path=/);
+
+    await page.keyboard.press("ControlOrMeta+S");
+    await expect.poll(() => saveCount).toBe(1);
+    await expect(page.getByTestId("toast-success")).toContainText("文件已保存");
   });
 
   test("批量删除：高风险确认 + 结果面板", async ({ page }) => {

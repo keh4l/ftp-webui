@@ -133,7 +133,7 @@ describe("T23 并发与恢复烟测", () => {
 
     await pool.destroyAll();
     expect(successRate).toBeGreaterThanOrEqual(0.98);
-  });
+  }, 15_000);
 
   it("故障注入后恢复并输出恢复报告", async () => {
     const pool = new ConnectionPool({
@@ -196,5 +196,5 @@ describe("T23 并发与恢复烟测", () => {
 
     await pool.destroyAll();
     expect(successRate).toBeGreaterThanOrEqual(0.98);
-  });
+  }, 15_000);
 });

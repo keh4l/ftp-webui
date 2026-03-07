@@ -1,5 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+type ApiErrorLike = {
+  statusCode: number;
+  toJSON: () => unknown;
+};
+
+function isApiErrorLike(error: unknown): error is ApiErrorLike {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "statusCode" in error &&
+    typeof error.statusCode === "number" &&
+    "toJSON" in error &&
+    typeof error.toJSON === "function"
+  );
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
 const mockAdapter = {
   delete: vi.fn(),
   rename: vi.fn(),
@@ -10,33 +33,22 @@ const mockAdapter = {
 
 const mockResolveAdapter = vi.fn(async () => mockAdapter);
 
-vi.mock("@/lib/api/file-helpers", async () => {
-  const { NextResponse } = await import("next/server");
-
+vi.mock("@/lib/api/file-helpers", () => {
   return {
     resolveAdapter: mockResolveAdapter,
     handleApiError: (error: unknown) => {
-      if (
-        typeof error === "object" &&
-        error !== null &&
-        "statusCode" in error &&
-        typeof (error as { statusCode: number }).statusCode === "number" &&
-        "toJSON" in error &&
-        typeof (error as { toJSON: () => unknown }).toJSON === "function"
-      ) {
-        return NextResponse.json((error as { toJSON: () => unknown }).toJSON(), {
-          status: (error as { statusCode: number }).statusCode,
-        });
+      if (isApiErrorLike(error)) {
+        return jsonResponse(error.toJSON(), error.statusCode);
       }
 
-      return NextResponse.json(
+      return jsonResponse(
         {
           error: {
             code: "INTERNAL_SERVER_ERROR",
             message: "Internal server error",
           },
         },
-        { status: 500 },
+        500,
       );
     },
   };

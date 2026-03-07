@@ -1,5 +1,28 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+type ApiErrorLike = {
+  statusCode: number;
+  toJSON: () => unknown;
+};
+
+function isApiErrorLike(error: unknown): error is ApiErrorLike {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "statusCode" in error &&
+    typeof error.statusCode === "number" &&
+    "toJSON" in error &&
+    typeof error.toJSON === "function"
+  );
+}
+
+function jsonResponse(body: unknown, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
+}
+
 const mockService = {
   listConnections: vi.fn(),
   createConnection: vi.fn(),
@@ -21,11 +44,26 @@ vi.mock("@/lib/logger", () => ({
   },
 }));
 
-vi.mock("@/lib/api/helpers", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/api/helpers")>("@/lib/api/helpers");
+vi.mock("@/lib/api/helpers", () => {
   return {
-    ...actual,
     getConnectionService: () => mockService,
+    jsonResponse,
+    parseJsonBody: async (request: Request) => request.json(),
+    handleApiError: (error: unknown) => {
+      if (isApiErrorLike(error)) {
+        return jsonResponse(error.toJSON(), error.statusCode);
+      }
+
+      return jsonResponse(
+        {
+          error: {
+            code: "INTERNAL_SERVER_ERROR",
+            message: "Internal server error",
+          },
+        },
+        500,
+      );
+    },
   };
 });
 
