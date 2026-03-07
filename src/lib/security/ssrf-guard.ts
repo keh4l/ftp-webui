@@ -12,14 +12,12 @@ type Ipv4Range = { base: number; mask: number };
 
 function ipv4ToInt(ip: string): number {
   const parts = ip.split(".").map(Number);
-  // eslint-disable-next-line no-bitwise
   return ((parts[0] << 24) | (parts[1] << 16) | (parts[2] << 8) | parts[3]) >>> 0;
 }
 
 function cidrToRange(cidr: string): Ipv4Range {
   const [baseIp, bits] = cidr.split("/");
   const base = ipv4ToInt(baseIp);
-  // eslint-disable-next-line no-bitwise
   const mask = bits === "0" ? 0 : (~0 << (32 - Number(bits))) >>> 0;
   return { base, mask };
 }
@@ -66,11 +64,9 @@ function isBlockedIpv6(ip: string): boolean {
   const firstByte = parseInt(firstGroup.slice(0, 2), 16);
 
   // fc00::/7 — unique local (fc or fd)
-  // eslint-disable-next-line no-bitwise
   if ((firstByte & 0xfe) === 0xfc) return true;
 
   // fe80::/10 — link-local
-  // eslint-disable-next-line no-bitwise
   if (firstByte === 0xfe && (parseInt(firstGroup.slice(2, 4), 16) & 0xc0) === 0x80) return true;
 
   return false;
@@ -83,7 +79,6 @@ function isBlockedIpv6(ip: string): boolean {
 function isBlockedIpv4(ip: string): boolean {
   const addr = ipv4ToInt(ip);
   return BLOCKED_IPV4_RANGES.some(
-    // eslint-disable-next-line no-bitwise
     (range) => (addr & range.mask) === (range.base & range.mask),
   );
 }

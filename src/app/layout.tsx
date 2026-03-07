@@ -1,27 +1,17 @@
 import type { Metadata } from "next";
-import { Lexend, Source_Sans_3, Noto_Sans_SC } from "next/font/google";
+import type { CSSProperties } from "react";
 import "./globals.css";
 import { NavBar } from "@/components/layout/nav-bar";
 
-
-const lexend = Lexend({
-  subsets: ["latin"],
-  variable: "--font-lexend",
-  display: "swap",
-});
-
-const sourceSans3 = Source_Sans_3({
-  subsets: ["latin"],
-  variable: "--font-source-sans",
-  display: "swap",
-});
-
-const notoSansSC = Noto_Sans_SC({
-  subsets: ["latin"],
-  weight: ["400", "500", "700"],
-  variable: "--font-noto-sans-sc",
-  display: "swap",
-});
+const fontVariables: CSSProperties & {
+  "--font-lexend": string;
+  "--font-source-sans": string;
+  "--font-noto-sans-sc": string;
+} = {
+  "--font-lexend": '"Inter", "Segoe UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif',
+  "--font-source-sans": '"Inter", "Segoe UI", "PingFang SC", "Noto Sans SC", system-ui, sans-serif',
+  "--font-noto-sans-sc": '"PingFang SC", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif',
+};
 
 export const metadata: Metadata = {
   title: "FTP WebUI",
@@ -34,10 +24,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="zh-CN"
-      className={`dark ${lexend.variable} ${sourceSans3.variable} ${notoSansSC.variable}`}
-    >
+    <html lang="zh-CN" className="dark" style={fontVariables}>
       <body className="font-[family-name:var(--font-source-sans)]">
         <NavBar />
 
