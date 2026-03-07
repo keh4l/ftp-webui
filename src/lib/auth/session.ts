@@ -1,5 +1,4 @@
-import { createHmac, timingSafeEqual } from "node:crypto";
-import type { NextRequest, NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
 
 import { env } from "@/lib/env";
 
@@ -12,6 +11,21 @@ type RequestLike = Pick<Request, "headers" | "url">;
 type SessionPayload = {
   username: string;
 };
+
+type SessionCookieOptions = typeof baseSessionCookieOptions & {
+  secure: boolean;
+};
+
+type ResponseWithCookies = {
+  cookies: {
+    set: (name: string, value: string, options: SessionCookieOptions) => void;
+  };
+};
+
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+
+let sessionKeyPromise: Promise<CryptoKey> | null = null;
 
 const baseSessionCookieOptions = {
   httpOnly: true,
@@ -50,20 +64,77 @@ function resolveSessionCookieSecure(request: RequestLike): boolean {
   return new URL(request.url).protocol === "https:";
 }
 
-function getSessionCookieOptions(request: RequestLike) {
+function getSessionCookieOptions(request: RequestLike): SessionCookieOptions {
   return {
     ...baseSessionCookieOptions,
     secure: resolveSessionCookieSecure(request),
   };
 }
 
+function toBase64Url(bytes: Uint8Array): string {
+  let binary = "";
+
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+}
+
+function fromBase64Url(value: string): Uint8Array {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return bytes;
+}
+
+function encodeUtf8(value: string): Uint8Array {
+  return textEncoder.encode(value);
+}
+
+function decodeUtf8(value: Uint8Array): string {
+  return textDecoder.decode(value);
+}
+
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  new Uint8Array(buffer).set(bytes);
+  return buffer;
+}
+
+function getWebCrypto(): Crypto {
+  if (typeof globalThis.crypto === "undefined") {
+    throw new Error("Web Crypto API is unavailable in this runtime");
+  }
+
+  return globalThis.crypto;
+}
+
+async function getSessionKey(): Promise<CryptoKey> {
+  sessionKeyPromise ??= getWebCrypto().subtle.importKey(
+    "raw",
+    toArrayBuffer(encodeUtf8(env.APP_MASTER_KEY)),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+
+  return sessionKeyPromise;
+}
+
 function encodePayload(payload: SessionPayload): string {
-  return Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+  return toBase64Url(encodeUtf8(JSON.stringify(payload)));
 }
 
 function decodePayload(encodedPayload: string): SessionPayload | null {
   try {
-    const decoded = Buffer.from(encodedPayload, "base64url").toString("utf8");
+    const decoded = decodeUtf8(fromBase64Url(encodedPayload));
     const parsed = JSON.parse(decoded) as Partial<SessionPayload>;
     if (typeof parsed.username !== "string" || parsed.username.length === 0) {
       return null;
@@ -75,31 +146,41 @@ function decodePayload(encodedPayload: string): SessionPayload | null {
   }
 }
 
-function signSession(timestamp: string, encodedPayload: string): string {
-  return createHmac("sha256", env.APP_MASTER_KEY)
-    .update(`${timestamp}.${encodedPayload}`)
-    .digest("base64url");
+async function signSession(timestamp: string, encodedPayload: string): Promise<string> {
+  const signature = await getWebCrypto().subtle.sign(
+    "HMAC",
+    await getSessionKey(),
+    toArrayBuffer(encodeUtf8(`${timestamp}.${encodedPayload}`)),
+  );
+
+  return toBase64Url(new Uint8Array(signature));
 }
 
 function safeCompare(left: string, right: string): boolean {
-  const leftBuffer = Buffer.from(left);
-  const rightBuffer = Buffer.from(right);
-  if (leftBuffer.length !== rightBuffer.length) {
+  const leftBytes = fromBase64Url(left);
+  const rightBytes = fromBase64Url(right);
+
+  if (leftBytes.length !== rightBytes.length) {
     return false;
   }
 
-  return timingSafeEqual(leftBuffer, rightBuffer);
+  let difference = 0;
+  for (let index = 0; index < leftBytes.length; index += 1) {
+    difference |= leftBytes[index] ^ rightBytes[index];
+  }
+
+  return difference === 0;
 }
 
-export function createSessionToken(username: string): string {
+export async function createSessionToken(username: string): Promise<string> {
   const timestamp = Date.now().toString();
   const encodedPayload = encodePayload({ username });
-  const signature = signSession(timestamp, encodedPayload);
+  const signature = await signSession(timestamp, encodedPayload);
 
   return `${timestamp}.${encodedPayload}.${signature}`;
 }
 
-export function verifySessionToken(token: string | undefined): SessionPayload | null {
+export async function verifySessionToken(token: string | undefined): Promise<SessionPayload | null> {
   if (!token) {
     return null;
   }
@@ -119,7 +200,7 @@ export function verifySessionToken(token: string | undefined): SessionPayload | 
     return null;
   }
 
-  const expectedSignature = signSession(timestamp, encodedPayload);
+  const expectedSignature = await signSession(timestamp, encodedPayload);
   if (!safeCompare(signature, expectedSignature)) {
     return null;
   }
@@ -127,18 +208,18 @@ export function verifySessionToken(token: string | undefined): SessionPayload | 
   return decodePayload(encodedPayload);
 }
 
-export function setSessionCookie(response: NextResponse, username: string, request: RequestLike): void {
-  response.cookies.set(SESSION_COOKIE_NAME, createSessionToken(username), getSessionCookieOptions(request));
+export async function setSessionCookie(response: ResponseWithCookies, username: string, request: RequestLike): Promise<void> {
+  response.cookies.set(SESSION_COOKIE_NAME, await createSessionToken(username), getSessionCookieOptions(request));
 }
 
-export function clearSessionCookie(response: NextResponse, request: RequestLike): void {
+export function clearSessionCookie(response: ResponseWithCookies, request: RequestLike): void {
   response.cookies.set(SESSION_COOKIE_NAME, "", {
     ...getSessionCookieOptions(request),
     maxAge: 0,
   });
 }
 
-export function getSessionFromRequest(request: Pick<NextRequest, "cookies">): SessionPayload | null {
+export async function getSessionFromRequest(request: Pick<NextRequest, "cookies">): Promise<SessionPayload | null> {
   const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
   return verifySessionToken(token);
 }

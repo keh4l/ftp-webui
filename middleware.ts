@@ -37,13 +37,13 @@ function unauthorizedApiResponse(): NextResponse {
   return NextResponse.json(error.toJSON(), { status: error.statusCode });
 }
 
-export function middleware(request: NextRequest): NextResponse {
+export async function middleware(request: NextRequest): Promise<NextResponse> {
   const pathname = request.nextUrl.pathname;
   if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
-  if (getSessionFromRequest(request)) {
+  if (await getSessionFromRequest(request)) {
     return NextResponse.next();
   }
 

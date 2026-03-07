@@ -2,6 +2,56 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 type SessionCookieSecureMode = "auto" | "always" | "never";
 
+type CookieOptions = {
+  httpOnly?: boolean;
+  sameSite?: "lax" | "strict" | "none";
+  path?: string;
+  maxAge?: number;
+  secure?: boolean;
+};
+
+type ResponseWithCookieCapture = {
+  headers: Headers;
+  cookies: {
+    set: (name: string, value: string, options: CookieOptions) => void;
+  };
+};
+
+function createCookieCaptureResponse(): ResponseWithCookieCapture {
+  const headers = new Headers();
+
+  return {
+    headers,
+    cookies: {
+      set: (name, value, options) => {
+        const parts = [`${name}=${value}`];
+
+        if (typeof options.maxAge === "number") {
+          parts.push(`Max-Age=${options.maxAge}`);
+        }
+
+        if (options.path) {
+          parts.push(`Path=${options.path}`);
+        }
+
+        if (options.httpOnly) {
+          parts.push("HttpOnly");
+        }
+
+        if (options.sameSite) {
+          parts.push(`SameSite=${options.sameSite.charAt(0).toUpperCase()}${options.sameSite.slice(1)}`);
+        }
+
+        if (options.secure) {
+          parts.push("Secure");
+        }
+
+        headers.set("set-cookie", parts.join("; "));
+      },
+    },
+  };
+}
+
 async function createSetCookieHeader(options: {
   mode: SessionCookieSecureMode;
   requestUrl: string;
@@ -14,10 +64,7 @@ async function createSetCookieHeader(options: {
   vi.stubEnv("ADMIN_PASSWORD", "test-pass");
   vi.stubEnv("SESSION_COOKIE_SECURE", options.mode);
 
-  const [{ NextResponse }, sessionModule] = await Promise.all([
-    import("next/server"),
-    import("@/lib/auth/session"),
-  ]);
+  const sessionModule = await import("@/lib/auth/session");
   const request = new Request(options.requestUrl, {
     headers: options.forwardedProto
       ? {
@@ -25,10 +72,10 @@ async function createSetCookieHeader(options: {
         }
       : undefined,
   });
-  const response = NextResponse.json({ ok: true }, { status: 200 });
+  const response = createCookieCaptureResponse();
 
   if (options.action === "set") {
-    sessionModule.setSessionCookie(response, "admin", request);
+    await sessionModule.setSessionCookie(response, "admin", request);
   } else {
     sessionModule.clearSessionCookie(response, request);
   }

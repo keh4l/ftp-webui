@@ -6,7 +6,7 @@ import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   logger.info({ method: "GET", route: "/api/auth/me" }, "API call");
-  const session = getSessionFromRequest(request);
+  const session = await getSessionFromRequest(request);
 
   return jsonResponse({ authenticated: session !== null }, 200);
 }
