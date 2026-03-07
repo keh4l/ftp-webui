@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { ArrowLeft, Save, AlertTriangle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import { Toast, type ToastItem, type ToastVariant } from "@/components/ui/toast";
 
 type ApiErrorResponse = {
   error?: {
@@ -37,31 +38,97 @@ export default function FileEditPage() {
   const filePath = searchParams.get("path") ?? "";
 
   const [content, setContent] = useState("");
+  const [savedContent, setSavedContent] = useState("");
   const [etag, setEtag] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [errorToast, setErrorToast] = useState<string | null>(null);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [conflict, setConflict] = useState(false);
   const [notEditable, setNotEditable] = useState<string | null>(null);
 
-  const clearToasts = useCallback(() => {
-    setErrorToast(null);
-    setSuccessToast(null);
+  const pushToast = useCallback((variant: ToastVariant, title: string, description?: string) => {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setToasts((current) => [...current, { id, variant, title, description }]);
   }, []);
 
+  const dismissToast = useCallback((id: string) => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
+  }, []);
+
+  const hasUnsavedChanges = content !== savedContent;
+  const lineCount = content.length === 0 ? 1 : content.split(/\r\n|\r|\n/).length;
+  const characterCount = content.length;
+
+  const confirmDiscardChanges = useCallback(() => {
+    if (!hasUnsavedChanges) {
+      return true;
+    }
+
+    return window.confirm("当前有未保存的修改，确定离开当前页面吗？");
+  }, [hasUnsavedChanges]);
+
   useEffect(() => {
-    if (!errorToast && !successToast) return;
-    const timer = window.setTimeout(() => clearToasts(), 3200);
-    return () => window.clearTimeout(timer);
-  }, [clearToasts, errorToast, successToast]);
+    if (!hasUnsavedChanges) {
+      return;
+    }
+
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      return;
+    }
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      if (!(event.target instanceof Element)) {
+        return;
+      }
+
+      const link = event.target.closest("a[href]");
+      if (!(link instanceof HTMLAnchorElement)) {
+        return;
+      }
+
+      if (link.target && link.target !== "_self") {
+        return;
+      }
+
+      const href = link.getAttribute("href");
+      if (!href || href.startsWith("#") || href.startsWith("javascript:")) {
+        return;
+      }
+
+      const nextUrl = new URL(link.href, window.location.href);
+      const currentUrl = new URL(window.location.href);
+      const isSameLocation =
+        nextUrl.pathname === currentUrl.pathname &&
+        nextUrl.search === currentUrl.search &&
+        nextUrl.hash === currentUrl.hash;
+
+      if (isSameLocation || confirmDiscardChanges()) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+    };
+
+    document.addEventListener("click", handleDocumentClick, true);
+    return () => document.removeEventListener("click", handleDocumentClick, true);
+  }, [confirmDiscardChanges, hasUnsavedChanges]);
 
   const loadContent = useCallback(async () => {
     if (!connectionId || !filePath) return;
     setIsLoading(true);
     setConflict(false);
     setNotEditable(null);
-    clearToasts();
 
     try {
       // Check editability first
@@ -88,14 +155,15 @@ export default function FileEditPage() {
 
       const textContent = payload as TextContent;
       setContent(textContent.content ?? "");
+      setSavedContent(textContent.content ?? "");
       setEtag(textContent.etag);
     } catch (error) {
       const message = error instanceof Error ? error.message : "加载文件内容失败";
-      setErrorToast(message);
+      pushToast("error", "加载文件内容失败", message);
     } finally {
       setIsLoading(false);
     }
-  }, [connectionId, filePath, clearToasts]);
+  }, [connectionId, filePath, pushToast]);
 
   useEffect(() => {
     void loadContent();
@@ -106,7 +174,6 @@ export default function FileEditPage() {
       if (!connectionId || !filePath) return;
       setIsSaving(true);
       setConflict(false);
-      clearToasts();
 
       try {
         const body: Record<string, string> = { path: filePath, content };
@@ -134,18 +201,44 @@ export default function FileEditPage() {
           throw new Error(apiError?.message ?? "保存失败");
         }
 
-        setSuccessToast("文件已保存");
+        pushToast("success", "文件已保存");
         // Reload to get fresh etag
         await loadContent();
       } catch (error) {
         const message = error instanceof Error ? error.message : "保存失败";
-        setErrorToast(message);
+        pushToast("error", "保存失败", message);
       } finally {
         setIsSaving(false);
       }
     },
-    [connectionId, filePath, content, etag, clearToasts, loadContent],
+    [connectionId, filePath, content, etag, loadContent, pushToast],
   );
+
+  useEffect(() => {
+    if (notEditable) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+
+        if (!isLoading && !isSaving) {
+          void handleSave();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleSave, isLoading, isSaving, notEditable]);
+
+  const editorStatusLabel = isSaving ? "保存中..." : hasUnsavedChanges ? "未保存修改" : "已同步";
+  const editorStatusClass = isSaving
+    ? "border-accent/30 bg-accent/10 text-accent"
+    : hasUnsavedChanges
+      ? "border-yellow-400/40 bg-yellow-500/10 text-yellow-100"
+      : "border-border-default bg-bg-secondary text-text-secondary";
 
   if (!filePath) {
     return (
@@ -184,29 +277,16 @@ export default function FileEditPage() {
             href={`/files/${encodeURIComponent(connectionId)}`}
             className="inline-flex items-center gap-2 rounded-md border border-border-default px-4 py-2 text-sm text-text-primary transition hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
             data-testid="editor-back-btn"
+            onClick={(event) => {
+              if (!confirmDiscardChanges()) {
+                event.preventDefault();
+              }
+            }}
           >
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             返回
           </Link>
         </header>
-
-        {errorToast ? (
-          <div
-            className="rounded-md border border-red-400/60 bg-red-500/10 px-4 py-2 text-sm text-red-100"
-            data-testid="toast-error"
-          >
-            {errorToast}
-          </div>
-        ) : null}
-
-        {successToast ? (
-          <div
-            className="rounded-md border border-accent/70 bg-accent/10 px-4 py-2 text-sm text-accent"
-            data-testid="toast-success"
-          >
-            {successToast}
-          </div>
-        ) : null}
 
         {conflict ? (
           <div
@@ -252,9 +332,37 @@ export default function FileEditPage() {
             加载中...
           </div>
         ) : notEditable ? null : (
-          <>
+          <section className="overflow-hidden rounded-2xl border border-border-default bg-bg-primary">
+            <div className="flex flex-col gap-3 border-b border-border-default px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className={`rounded-full px-2.5 py-1 ${editorStatusClass}`}>{editorStatusLabel}</span>
+                <span className="rounded-full border border-border-default bg-bg-secondary px-2.5 py-1 text-text-secondary">
+                  {lineCount} 行
+                </span>
+                <span className="rounded-full border border-border-default bg-bg-secondary px-2.5 py-1 text-text-secondary">
+                  {characterCount} 字符
+                </span>
+                <span className="rounded-full border border-border-default bg-bg-secondary px-2.5 py-1 text-text-secondary">
+                  快捷键 ⌘/Ctrl+S
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-2 rounded-md border border-accent bg-accent/10 px-4 py-2 text-sm text-accent transition hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  onClick={() => void handleSave()}
+                  disabled={isSaving || isLoading || !hasUnsavedChanges}
+                  data-testid="editor-save-btn"
+                >
+                  <Save className="h-4 w-4" aria-hidden="true" />
+                  {isSaving ? "保存中..." : hasUnsavedChanges ? "保存" : "已保存"}
+                </button>
+              </div>
+            </div>
+
             <textarea
-              className="min-h-[400px] w-full rounded-md border border-border-default bg-bg-primary px-4 py-3 font-mono text-sm text-text-primary placeholder:text-text-secondary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              className="min-h-[480px] w-full resize-y bg-transparent px-4 py-4 font-mono text-sm text-text-primary placeholder:text-text-secondary focus-visible:outline-none"
               style={{ fontFamily: "var(--font-fira-code, monospace)" }}
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -262,20 +370,10 @@ export default function FileEditPage() {
               data-testid="editor-textarea"
               spellCheck={false}
             />
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                className="inline-flex items-center gap-2 rounded-md border border-accent bg-accent/10 px-4 py-2 text-sm text-accent transition hover:bg-accent/20 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-                onClick={() => void handleSave()}
-                disabled={isSaving || isLoading}
-                data-testid="editor-save-btn"
-              >
-                <Save className="h-4 w-4" aria-hidden="true" />
-                {isSaving ? "保存中..." : "保存"}
-              </button>
-            </div>
-          </>
+          </section>
         )}
+
+        <Toast toasts={toasts} onDismiss={dismissToast} />
       </div>
     </main>
   );
