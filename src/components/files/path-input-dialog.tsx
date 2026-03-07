@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { DialogShell } from "@/components/ui/dialog-shell";
 
 type PathInputDialogProps = {
   title: string;
@@ -78,34 +78,16 @@ export function PathInputDialog({
   const canConfirm = isValidPathInput(pathValue);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="mx-4 w-full max-w-lg rounded-xl border border-border-default bg-bg-secondary p-6 shadow-xl"
-        data-testid={dialogTestId}
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary">
-            {icon}
-            {title}
-          </h2>
-          <button
-            type="button"
-            className="rounded-md p-1 text-text-secondary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={onCancelAction}
-            data-testid={cancelButtonTestId}
-            aria-label="取消"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
-
-        {typeof description === "string" && description.trim() ? (
-          <p className="mt-3 text-sm text-text-secondary">{description}</p>
-        ) : null}
-
+    <DialogShell
+      title={title}
+      description={typeof description === "string" && description.trim() ? description : undefined}
+      icon={icon}
+      onClose={onCancelAction}
+      panelClassName="max-w-lg bg-bg-secondary"
+      dialogTestId={dialogTestId}
+      closeButtonTestId={cancelButtonTestId}
+      closeButtonLabel="取消"
+    >
         {Array.isArray(paths) && paths.length > 0 ? (
           <>
             <p className="mt-3 text-sm text-text-secondary">
@@ -166,7 +148,6 @@ export function PathInputDialog({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </DialogShell>
   );
 }

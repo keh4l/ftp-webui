@@ -1,5 +1,6 @@
-import { Trash2, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { DialogShell } from "@/components/ui/dialog-shell";
 
 type BatchDeleteDialogProps = {
   paths: string[];
@@ -15,7 +16,6 @@ export function BatchDeleteDialog({
   onCancelAction,
 }: BatchDeleteDialogProps) {
   const [confirmText, setConfirmText] = useState("");
-  const dialogRef = useRef<HTMLDivElement>(null);
   const firstFocusRef = useRef<HTMLButtonElement>(null);
   const needsTypedConfirm = paths.length >= 5;
 
@@ -30,50 +30,38 @@ export function BatchDeleteDialog({
     }
   }, [isOpen]);
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") {
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
         onCancelAction();
       }
-    },
-    [onCancelAction],
-  );
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onCancelAction]);
 
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
-      onKeyDown={handleKeyDown}
-    >
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label="确认批量删除"
-        className="mx-4 w-full max-w-lg rounded-xl border border-border-default bg-bg-secondary p-6 shadow-xl"
-        data-testid="batch-delete-dialog"
+    <div>
+      <DialogShell
+        title="确认批量删除"
+        icon={<Trash2 className="h-5 w-5 text-red-400" aria-hidden="true" />}
+        onClose={() => {
+          setConfirmText("");
+          onCancelAction();
+        }}
+        panelClassName="max-w-lg bg-bg-secondary"
+        dialogTestId="batch-delete-dialog"
+        closeButtonTestId="batch-delete-cancel-btn"
+        closeButtonLabel="取消"
+        closeButtonRef={firstFocusRef}
       >
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary">
-            <Trash2 className="h-5 w-5 text-red-400" aria-hidden="true" />
-            确认批量删除
-          </h2>
-          <button
-            ref={firstFocusRef}
-            type="button"
-            className="rounded-md p-1 text-text-secondary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={() => {
-              setConfirmText("");
-              onCancelAction();
-            }}
-            data-testid="batch-delete-cancel-btn"
-            aria-label="取消"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
-
         <p className="mt-3 text-sm text-text-secondary">
           即将删除以下{" "}
           <span className="font-semibold text-red-400" data-testid="batch-delete-count">
@@ -133,7 +121,7 @@ export function BatchDeleteDialog({
             确认删除
           </button>
         </div>
-      </div>
+      </DialogShell>
     </div>
   );
 }

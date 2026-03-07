@@ -12,6 +12,7 @@ import { BatchResultPanel } from "@/components/files/batch-result-panel";
 import { FileBreadcrumb } from "@/components/files/file-breadcrumb";
 import { FileTable } from "@/components/files/file-table";
 import { FileToolbar } from "@/components/files/file-toolbar";
+import { Toast, type ToastItem, type ToastVariant } from "@/components/ui/toast";
 import {
   sortFileEntries,
   type FileSortDirection,
@@ -89,8 +90,7 @@ export default function FileBrowserPage() {
   const [isMoving, setIsMoving] = useState(false);
   const [connectionMissing, setConnectionMissing] = useState(false);
   const [transferStatus, setTransferStatus] = useState("尚未执行传输");
-  const [errorToast, setErrorToast] = useState<string | null>(null);
-  const [successToast, setSuccessToast] = useState<string | null>(null);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   // Batch selection state
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
@@ -128,9 +128,13 @@ export default function FileBrowserPage() {
     });
   }, []);
 
-  const clearToasts = useCallback(() => {
-    setErrorToast(null);
-    setSuccessToast(null);
+  const pushToast = useCallback((variant: ToastVariant, title: string, description?: string) => {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setToasts((current) => [...current, { id, variant, title, description }]);
+  }, []);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((current) => current.filter((toast) => toast.id !== id));
   }, []);
 
   const loadDirectory = useCallback(
@@ -156,7 +160,7 @@ export default function FileBrowserPage() {
             setEntries([]);
             setCurrentPath("/");
             setPathInput("/");
-            setErrorToast(message);
+            pushToast("error", message);
             setTransferStatus("连接已失效，请返回连接列表恢复会话");
             return;
           }
@@ -172,23 +176,17 @@ export default function FileBrowserPage() {
         setSelectedPaths(new Set());
       } catch (error) {
         const message = error instanceof Error ? error.message : "目录加载失败";
-        setErrorToast(message);
+        pushToast("error", message);
       } finally {
         setIsLoading(false);
       }
     },
-    [connectionId],
+    [connectionId, pushToast],
   );
 
   useEffect(() => {
     void loadDirectory("/");
   }, [loadDirectory]);
-
-  useEffect(() => {
-    if (!errorToast && !successToast) return;
-    const timer = window.setTimeout(() => clearToasts(), 3200);
-    return () => window.clearTimeout(timer);
-  }, [clearToasts, errorToast, successToast]);
 
   const canGoParent = currentPath !== "/";
   const isBusy = isLoading || isMoving;
@@ -208,22 +206,19 @@ export default function FileBrowserPage() {
 
   const handleNavigate = useCallback(
     (targetPath: string) => {
-      clearToasts();
       void loadDirectory(targetPath);
     },
-    [clearToasts, loadDirectory],
+    [loadDirectory],
   );
 
   const handlePathSubmit = useCallback(() => {
-    clearToasts();
     void loadDirectory(pathInput);
-  }, [clearToasts, loadDirectory, pathInput]);
+  }, [loadDirectory, pathInput]);
 
   const handleRefresh = useCallback(() => {
-    clearToasts();
     setTransferStatus(`刷新目录 ${currentPath}`);
     void loadDirectory(currentPath, { keepLoading: true });
-  }, [clearToasts, currentPath, loadDirectory]);
+  }, [currentPath, loadDirectory]);
 
   const handleOpenDirectory = useCallback(
     (entry: FileEntry) => {
@@ -236,7 +231,6 @@ export default function FileBrowserPage() {
   const handleUpload = useCallback(
     async (file: File) => {
       if (!connectionId) return;
-      clearToasts();
       setTransferStatus(`正在上传 ${file.name}`);
 
       try {
@@ -255,29 +249,28 @@ export default function FileBrowserPage() {
           throw new Error(apiError?.message ?? "上传失败");
         }
 
-        setSuccessToast(`已上传 ${file.name}`);
+        pushToast("success", "上传完成", file.name);
         setTransferStatus(`上传完成：${file.name}`);
         await loadDirectory(currentPath, { keepLoading: true });
       } catch (error) {
         const message = error instanceof Error ? error.message : "上传失败";
-        setErrorToast(message);
+        pushToast("error", "上传失败", message);
         setTransferStatus(`上传失败：${file.name}`);
       }
     },
-    [clearToasts, connectionId, currentPath, loadDirectory],
+    [connectionId, currentPath, loadDirectory, pushToast],
   );
 
   const handleDownload = useCallback(
     (entry: FileEntry) => {
       if (!connectionId) return;
-      clearToasts();
       const targetPath = entry.path ? normalizePath(entry.path) : childPath(currentPath, entry.name);
       const downloadUrl = `/api/connections/${encodeURIComponent(connectionId)}/files/download?path=${encodeURIComponent(targetPath)}`;
       window.open(downloadUrl, "_blank", "noopener,noreferrer");
-      setSuccessToast(`已发起下载 ${entry.name}`);
+      pushToast("success", "已发起下载", entry.name);
       setTransferStatus(`下载已开始：${entry.name}`);
     },
-    [clearToasts, connectionId, currentPath],
+    [connectionId, currentPath, pushToast],
   );
 
   // --- Editor navigation ---
@@ -302,7 +295,7 @@ export default function FileBrowserPage() {
           entry.type === "directory" &&
           (destinationDirPath === sourcePath || destinationDirPath.startsWith(`${sourcePath}/`))
         ) {
-          setErrorToast(`不能将目录「${entry.name}」移动到自身或其子目录`);
+          pushToast("error", "移动失败", `不能将目录「${entry.name}」移动到自身或其子目录`);
           setTransferStatus(`移动失败：${entry.name}`);
           return;
         }
@@ -321,7 +314,6 @@ export default function FileBrowserPage() {
       }
 
       const moveLabel = sourcePaths.length === 1 ? sourceEntries[0]?.name ?? sourcePaths[0] : `${sourcePaths.length} 个项目`;
-      clearToasts();
       setIsMoving(true);
       setTransferStatus(`正在移动 ${moveLabel} → ${destinationLabel}`);
 
@@ -347,9 +339,9 @@ export default function FileBrowserPage() {
         const failCount = results.length - successCount;
 
         if (failCount === 0) {
-          setSuccessToast(`已移动 ${successCount} 个项目到 ${destinationLabel}`);
+          pushToast("success", "批量移动完成", `已移动 ${successCount} 个项目到 ${destinationLabel}`);
         } else {
-          setErrorToast(`移动完成：${successCount} 成功，${failCount} 失败`);
+          pushToast("error", "批量移动部分失败", `${successCount} 成功，${failCount} 失败`);
         }
 
         setTransferStatus(`移动完成：${successCount} 成功，${failCount} 失败`);
@@ -357,13 +349,13 @@ export default function FileBrowserPage() {
         await loadDirectory(currentPath, { keepLoading: true });
       } catch (error) {
         const message = error instanceof Error ? error.message : "移动失败";
-        setErrorToast(message);
+        pushToast("error", "移动失败", message);
         setTransferStatus(`移动失败：${moveLabel}`);
       } finally {
         setIsMoving(false);
       }
     },
-    [clearToasts, connectionId, currentPath, loadDirectory],
+    [connectionId, currentPath, loadDirectory, pushToast],
   );
 
   const handleMoveEntries = useCallback(
@@ -393,20 +385,20 @@ export default function FileBrowserPage() {
       try {
         destinationDirPath = normalizePath(destinationInput);
       } catch {
-        setErrorToast("目标目录路径不合法");
+        pushToast("error", "目标目录路径不合法");
         return;
       }
 
       const selectedEntries = entries.filter((entry) => selectedPaths.has(entry.path ?? entry.name));
       if (selectedEntries.length === 0) {
-        setErrorToast("未找到可移动的已选项目");
+        pushToast("error", "未找到可移动的已选项目");
         return;
       }
 
       closeBatchMoveDialog();
       void executeMoveEntries(selectedEntries, destinationDirPath, destinationDirPath);
     },
-    [closeBatchMoveDialog, entries, executeMoveEntries, selectedPaths],
+    [closeBatchMoveDialog, entries, executeMoveEntries, pushToast, selectedPaths],
   );
 
   const executeCreateEntry = useCallback(
@@ -416,7 +408,6 @@ export default function FileBrowserPage() {
       const noun = entryType === "file" ? "文件" : "文件夹";
       const action = entryType === "file" ? "create_file" : "create_directory";
       const targetPath = childPath(currentPath, name);
-      clearToasts();
       setIsMoving(true);
       setTransferStatus(`正在创建${noun}：${name}`);
 
@@ -433,18 +424,18 @@ export default function FileBrowserPage() {
           throw new Error(apiError?.message ?? `创建${noun}失败`);
         }
 
-        setSuccessToast(`已创建${noun}：${name}`);
+        pushToast("success", `已创建${noun}`, name);
         setTransferStatus(`创建完成：${name}`);
         await loadDirectory(currentPath, { keepLoading: true });
       } catch (error) {
         const message = error instanceof Error ? error.message : `创建${noun}失败`;
-        setErrorToast(message);
+        pushToast("error", `创建${noun}失败`, message);
         setTransferStatus(`创建失败：${name}`);
       } finally {
         setIsMoving(false);
       }
     },
-    [clearToasts, connectionId, currentPath, loadDirectory],
+    [connectionId, currentPath, loadDirectory, pushToast],
   );
 
   const openCreateEntryDialog = useCallback((entryType: "file" | "directory") => {
@@ -459,14 +450,14 @@ export default function FileBrowserPage() {
       const name = normalizeEntryName(inputName);
 
       if (!name) {
-        setErrorToast(`${noun}名称不合法`);
+        pushToast("error", `${noun}名称不合法`);
         return;
       }
 
       closeCreateEntryDialog();
       void executeCreateEntry(createEntryDialogType, name);
     },
-    [closeCreateEntryDialog, createEntryDialogType, executeCreateEntry],
+    [closeCreateEntryDialog, createEntryDialogType, executeCreateEntry, pushToast],
   );
 
   const handleCreateFile = useCallback(() => {
@@ -521,7 +512,6 @@ export default function FileBrowserPage() {
     async (paths: string[]) => {
       if (!connectionId || paths.length === 0) return;
       setShowBatchDeleteDialog(false);
-      clearToasts();
       setTransferStatus(`正在批量删除 ${paths.length} 个项目...`);
 
       try {
@@ -549,9 +539,9 @@ export default function FileBrowserPage() {
         const failCount = results.length - successCount;
 
         if (failCount === 0) {
-          setSuccessToast(`已成功删除 ${successCount} 个项目`);
+          pushToast("success", "批量删除完成", `已成功删除 ${successCount} 个项目`);
         } else {
-          setErrorToast(`${successCount} 成功，${failCount} 失败`);
+          pushToast("error", "批量删除部分失败", `${successCount} 成功，${failCount} 失败`);
         }
 
         setTransferStatus(`批量删除完成：${successCount} 成功，${failCount} 失败`);
@@ -559,11 +549,11 @@ export default function FileBrowserPage() {
         await loadDirectory(currentPath, { keepLoading: true });
       } catch (error) {
         const message = error instanceof Error ? error.message : "批量删除失败";
-        setErrorToast(message);
+        pushToast("error", "批量删除失败", message);
         setTransferStatus(`批量删除失败`);
       }
     },
-    [clearToasts, connectionId, currentPath, loadDirectory],
+    [connectionId, currentPath, loadDirectory, pushToast],
   );
 
   const handleBatchRetry = useCallback(
@@ -598,89 +588,112 @@ export default function FileBrowserPage() {
   return (
     <main className="min-h-screen bg-bg-deep px-4 py-6 text-text-primary md:px-8 md:py-8">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
-        <header className="space-y-1">
-          <h1 className="text-2xl font-[family-name:var(--font-lexend)] font-semibold tracking-tight">{pageTitle}</h1>
-          <p className="text-sm text-text-secondary">连接 ID：{connectionId || "-"}</p>
+        <header className="rounded-2xl border border-border-default bg-bg-primary p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="min-w-0 space-y-3">
+              <div className="space-y-1">
+                <h1 className="text-2xl font-[family-name:var(--font-lexend)] font-semibold tracking-tight">{pageTitle}</h1>
+                <p className="text-sm text-text-secondary">围绕当前目录执行浏览、上传、编辑与批量操作。</p>
+              </div>
+
+              <div className="flex flex-wrap gap-2 text-xs">
+                <span className="rounded-full border border-border-default bg-bg-secondary px-2.5 py-1 text-text-secondary">
+                  连接 ID：{connectionId || "-"}
+                </span>
+                <span className="rounded-full border border-border-default bg-bg-secondary px-2.5 py-1 text-text-secondary">
+                  当前目录：{currentPath}
+                </span>
+                <span className="rounded-full border border-accent/30 bg-accent/10 px-2.5 py-1 text-accent">
+                  已选 {selectedPaths.size} 项
+                </span>
+              </div>
+
+              <FileBreadcrumb path={currentPath} onNavigateAction={handleNavigate} />
+            </div>
+
+            <button
+              type="button"
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-border-default bg-bg-secondary px-4 text-sm text-text-primary transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+              onClick={() => handleNavigate(parentPath(currentPath))}
+              disabled={!canGoParent || isBusy}
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+              返回上级
+            </button>
+          </div>
         </header>
 
-        <FileBreadcrumb path={currentPath} onNavigateAction={handleNavigate} />
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex h-9 items-center gap-2 rounded-md border border-border-default bg-bg-secondary px-3 text-sm text-text-primary transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={() => handleNavigate(parentPath(currentPath))}
-            disabled={!canGoParent || isBusy}
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            返回上级
-          </button>
+        <div className="sticky top-16 z-20 rounded-2xl border border-border-default bg-bg-deep/90 p-1 backdrop-blur">
+          <FileToolbar
+            pathInput={pathInput}
+            isLoading={isBusy}
+            selectedCount={selectedPaths.size}
+            onPathInputChangeAction={setPathInput}
+            onPathSubmitAction={handlePathSubmit}
+            onRefreshAction={handleRefresh}
+            onCreateFileAction={handleCreateFile}
+            onCreateFolderAction={handleCreateFolder}
+            onUploadAction={handleUpload}
+            onBatchMoveAction={handleBatchMove}
+            onBatchDeleteAction={() => setShowBatchDeleteDialog(true)}
+          />
         </div>
 
-        <FileToolbar
-          pathInput={pathInput}
-          isLoading={isBusy}
-          selectedCount={selectedPaths.size}
-          onPathInputChangeAction={setPathInput}
-          onPathSubmitAction={handlePathSubmit}
-          onRefreshAction={handleRefresh}
-          onCreateFileAction={handleCreateFile}
-          onCreateFolderAction={handleCreateFolder}
-          onUploadAction={handleUpload}
-          onBatchMoveAction={handleBatchMove}
-          onBatchDeleteAction={() => setShowBatchDeleteDialog(true)}
-        />
-
-        {errorToast ? (
-          <div
-            className="rounded-md border border-red-400/60 bg-red-500/10 px-4 py-2 text-sm text-red-100"
-            data-testid="toast-error"
-          >
-            {errorToast}
+        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
+          <div className="min-w-0 space-y-4">
+            <FileTable
+              entries={sortedEntries}
+              isLoading={isBusy}
+              selectedPaths={selectedPaths}
+              sortField={sortField}
+              sortDirection={sortDirection}
+              onOpenDirectoryAction={handleOpenDirectory}
+              onDownloadAction={handleDownload}
+              onEditAction={handleEdit}
+              onSortFieldToggleAction={handleSortFieldToggle}
+              onMoveEntriesAction={handleMoveEntries}
+              onSetPathSelectedAction={handleSetPathSelected}
+              onToggleSelectAction={handleToggleSelect}
+              onToggleSelectAllAction={handleToggleSelectAll}
+            />
           </div>
-        ) : null}
 
-        {successToast ? (
-          <div
-            className="rounded-md border border-accent/70 bg-accent/10 px-4 py-2 text-sm text-accent"
-            data-testid="toast-success"
-          >
-            {successToast}
-          </div>
-        ) : null}
+          <aside className="space-y-4">
+            <section className="rounded-2xl border border-border-default bg-bg-primary p-4">
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-secondary">目录概览</p>
+              <p className="mt-3 break-all font-mono text-sm text-text-primary">{currentPath}</p>
 
-        <section
-          className="rounded-md border border-border-default bg-bg-primary/60 px-3 py-2 text-xs text-text-secondary"
-          aria-live="polite"
-          data-testid="transfer-latest-status"
-        >
-          {transferStatus}
-        </section>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                <div className="rounded-xl border border-border-default bg-bg-secondary/80 p-3">
+                  <p className="text-xs text-text-secondary">目录项</p>
+                  <p className="mt-1 text-lg font-semibold text-text-primary">{sortedEntries.length}</p>
+                </div>
+                <div className="rounded-xl border border-border-default bg-bg-secondary/80 p-3">
+                  <p className="text-xs text-text-secondary">已选项目</p>
+                  <p className="mt-1 text-lg font-semibold text-text-primary">{selectedPaths.size}</p>
+                </div>
+              </div>
+            </section>
 
-        {showBatchResults ? (
-          <BatchResultPanel
-            results={batchResults}
-            isOpen={showBatchResults}
-            onRetryAction={handleBatchRetry}
-            onCloseAction={() => setShowBatchResults(false)}
-          />
-        ) : null}
+            <section
+              className="rounded-2xl border border-border-default bg-bg-primary p-4"
+              aria-live="polite"
+              data-testid="transfer-latest-status"
+            >
+              <p className="text-xs font-medium uppercase tracking-[0.18em] text-text-secondary">最近状态</p>
+              <p className="mt-3 text-sm text-text-primary">{transferStatus}</p>
+            </section>
 
-        <FileTable
-          entries={sortedEntries}
-          isLoading={isBusy}
-          selectedPaths={selectedPaths}
-          sortField={sortField}
-          sortDirection={sortDirection}
-          onOpenDirectoryAction={handleOpenDirectory}
-          onDownloadAction={handleDownload}
-          onEditAction={handleEdit}
-          onSortFieldToggleAction={handleSortFieldToggle}
-          onMoveEntriesAction={handleMoveEntries}
-          onSetPathSelectedAction={handleSetPathSelected}
-          onToggleSelectAction={handleToggleSelect}
-          onToggleSelectAllAction={handleToggleSelectAll}
-        />
+            {showBatchResults ? (
+              <BatchResultPanel
+                results={batchResults}
+                isOpen={showBatchResults}
+                onRetryAction={handleBatchRetry}
+                onCloseAction={() => setShowBatchResults(false)}
+              />
+            ) : null}
+          </aside>
+        </div>
       </div>
 
       <CreateEntryDialog
@@ -706,6 +719,8 @@ export default function FileBrowserPage() {
         onConfirmAction={executeBatchMove}
         onCancelAction={closeBatchMoveDialog}
       />
+
+      <Toast toasts={toasts} onDismiss={dismissToast} />
     </main>
   );
 }

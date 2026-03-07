@@ -1,5 +1,6 @@
-import { FilePlus2, FolderPlus, X } from "lucide-react";
+import { FilePlus2, FolderPlus } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { DialogShell } from "@/components/ui/dialog-shell";
 
 type CreateEntryType = "file" | "directory";
 
@@ -67,32 +68,16 @@ export function CreateEntryDialog({ entryType, isOpen, onConfirmAction, onCancel
   const Icon = entryType === "file" ? FilePlus2 : FolderPlus;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={copy.title}
-        className="mx-4 w-full max-w-lg rounded-xl border border-border-default bg-bg-secondary p-6 shadow-xl"
-        data-testid="create-entry-dialog"
-      >
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-lg font-semibold text-text-primary">
-            <Icon className="h-5 w-5 text-accent" aria-hidden="true" />
-            {copy.title}
-          </h2>
-          <button
-            type="button"
-            className="rounded-md p-1 text-text-secondary transition hover:text-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={onCancelAction}
-            data-testid="create-entry-cancel-btn"
-            aria-label="取消"
-          >
-            <X className="h-5 w-5" aria-hidden="true" />
-          </button>
-        </div>
-
-        <p className="mt-3 text-sm text-text-secondary">请输入要创建的{copy.noun}名称（不能包含 / 或 \）。</p>
-
+    <DialogShell
+      title={copy.title}
+      description={`请输入要创建的${copy.noun}名称（不能包含 / 或 \\）。`}
+      icon={<Icon className="h-5 w-5 text-accent" aria-hidden="true" />}
+      onClose={onCancelAction}
+      panelClassName="max-w-lg bg-bg-secondary"
+      dialogTestId="create-entry-dialog"
+      closeButtonTestId="create-entry-cancel-btn"
+      closeButtonLabel="取消"
+    >
         <form
           className="mt-4"
           onSubmit={(event) => {
@@ -131,7 +116,6 @@ export function CreateEntryDialog({ entryType, isOpen, onConfirmAction, onCancel
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </DialogShell>
   );
 }
